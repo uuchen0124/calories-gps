@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>YUYU的卡路里GPS - 智慧運動感測與食物換算</title>
     
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -74,7 +75,6 @@
             border: 2.5px solid #ffffff;
             box-shadow: 0 0 10px rgba(0,0,0,0.4);
         }
-        /* Sidebar transition */
         .sidebar-transition {
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -84,7 +84,6 @@
 
     <header class="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 sticky top-0 z-40 flex items-center justify-between shadow-lg">
         <div class="flex items-center space-x-3">
-            <!-- 側欄開關按鈕 -->
             <button id="btnOpenSidebar" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 flex items-center justify-center transition active:scale-95 shadow-md">
                 <i class="fa-solid fa-bars text-lg"></i>
             </button>
@@ -106,7 +105,6 @@
         </div>
 
         <div class="flex items-center space-x-2 shrink-0">
-            <!-- 體態設定按鈕 -->
             <button id="btnOpenUserModal" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
                 <i class="fa-solid fa-sliders text-emerald-400"></i>
                 <span>個人體態</span>
@@ -114,7 +112,6 @@
         </div>
     </header>
 
-    <!-- 側欄抽屜 (Sidebar Drawer) -->
     <div id="sidebarOverlay" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300"></div>
     <aside id="sidebarDrawer" class="fixed top-0 bottom-0 left-0 z-50 w-72 bg-slate-950 border-r border-slate-800 p-5 flex flex-col justify-between shadow-2xl transform -translate-x-full sidebar-transition">
         <div class="space-y-6">
@@ -146,7 +143,7 @@
         </div>
 
         <div class="pt-4 border-t border-slate-800 text-[11px] text-slate-500 text-center">
-            YUYU's Calorie GPS v2.5 &copy; 2026
+            YUYU's Calorie GPS v2.6 &copy; 2026
         </div>
     </aside>
 
@@ -247,12 +244,6 @@
                 </div>
 
                 <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-                    <button id="btnUploadIMU" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-file-arrow-up text-cyan-400"></i>
-                        <span>上傳IMU</span>
-                    </button>
-                    <input type="file" id="imuFileInput" accept=".json,.csv" class="hidden" />
-
                     <button id="btnToggleWorkout" class="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition active:scale-95">
                         <i class="fa-solid fa-play"></i>
                         <span id="btnWorkoutText">開始運動追蹤</span>
@@ -270,9 +261,9 @@
             <div class="flex items-center justify-between bg-slate-800/90 p-4 rounded-2xl border border-slate-700 shadow-md">
                 <div>
                     <h2 class="text-base font-bold text-white flex items-center gap-2">
-                        <i class="fa-solid fa-clock-rotate-left text-cyan-400"></i> 歷史運動紀錄
+                        <i class="fa-solid fa-clock-rotate-left text-cyan-400"></i> 歷史運動紀錄與路線圖
                     </h2>
-                    <p class="text-xs text-slate-400 mt-0.5">檢視過去每一次運動的詳細數據與食物等價換算</p>
+                    <p class="text-xs text-slate-400 mt-0.5">檢視過去每次運動的 8 大詳細指標、食物換算與運動路線圖</p>
                 </div>
                 <button id="btnClearHistory" class="px-3 py-2 bg-rose-950/50 hover:bg-rose-900 text-rose-300 rounded-xl text-xs font-semibold border border-rose-800/80 transition flex items-center gap-1.5">
                     <i class="fa-solid fa-trash-can"></i>
@@ -280,7 +271,6 @@
                 </button>
             </div>
 
-            <!-- 紀錄列表容器 -->
             <div id="historyListContainer" class="flex-1 space-y-3 overflow-y-auto max-h-[600px] pr-1">
                 <!-- 動態塞入紀錄卡片 -->
             </div>
@@ -358,13 +348,10 @@
                 <!-- 食物換算動態看板 -->
                 <div class="bg-gradient-to-br from-slate-850 to-slate-900 p-4 rounded-2xl border border-emerald-500/40 text-center space-y-2 shadow-inner">
                     <div class="text-xs text-emerald-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-bowl-rice text-amber-400"></i> 卡路里美食等價換算
+                        <i class="fa-solid fa-bowl-rice text-amber-400"></i> 食物對照與能量換算
                     </div>
                     <div id="foodEquivalentText" class="text-base sm:text-lg font-bold text-white leading-relaxed px-2">
-                        你消耗了 1 碗白飯的卡路里！繼續加油！
-                    </div>
-                    <div id="foodEquivalentSub" class="text-[11px] text-slate-400">
-                        (資訊對照：1碗白飯卡路里約為 160-200 卡)
+                        太好了！這次的運動你消耗了一個白飯！繼續保持！
                     </div>
                 </div>
 
@@ -372,6 +359,12 @@
                 <button id="btnOpenDetailModal" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-bold text-xs border border-slate-700 transition flex items-center justify-center gap-2">
                     <i class="fa-solid fa-chart-line"></i>
                     <span>查看詳細運動數據</span>
+                </button>
+
+                <!-- 查看運動路線圖按鈕 -->
+                <button id="btnOpenRouteMapModal" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 font-bold text-xs border border-slate-700 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                    <span>查看運動路線圖</span>
                 </button>
 
                 <button id="btnCloseResultModal" class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition">
@@ -438,7 +431,194 @@
         </div>
     </div>
 
+    <!-- 運動路線圖 Modal -->
+    <div id="routeMapModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="bg-slate-850 p-4 border-b border-slate-800 flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-map-location-dot text-cyan-400"></i> 紀錄運動路線圖
+                </h3>
+                <button id="btnCloseRouteMapModal" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-4 flex-1 relative min-h-[350px]">
+                <div id="historyRouteMap" class="w-full h-[350px] rounded-2xl overflow-hidden border border-slate-700"></div>
+            </div>
+
+            <div class="p-4 border-t border-slate-800 bg-slate-850 shrink-0">
+                <button id="btnCloseRouteMapModal2" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 transition">
+                    關閉路線圖
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // 根據您上傳的諾華健康諮詢中心 / 衛福部食品營養成分資料庫整理的完整食物熱量對照表 (每100公克)
+        const FOOD_DB = [
+            { name: "椰子", calories: 18 },
+            { name: "西瓜", calories: 25 },
+            { name: "粉豆", calories: 26 },
+            { name: "哈蜜瓜", calories: 31 },
+            { name: "文旦", calories: 32 },
+            { name: "檸檬", calories: 32 },
+            { name: "枇杷", calories: 32 },
+            { name: "蓮霧", calories: 34 },
+            { name: "葡萄柚", calories: 33 },
+            { name: "楊桃", calories: 35 },
+            { name: "聖女蕃茄", calories: 35 },
+            { name: "鹹豆漿", calories: 37 },
+            { name: "美濃瓜", calories: 38 },
+            { name: "泰國芭樂", calories: 38 },
+            { name: "土芭樂", calories: 39 },
+            { name: "草莓", calories: 39 },
+            { name: "柑橘", calories: 40 },
+            { name: "愛文芒果", calories: 40 },
+            { name: "水梨", calories: 40 },
+            { name: "甜豌豆", calories: 41 },
+            { name: "柳丁", calories: 43 },
+            { name: "水蜜桃", calories: 43 },
+            { name: "桃子", calories: 47 },
+            { name: "棗子", calories: 46 },
+            { name: "鳳梨", calories: 46 },
+            { name: "金棗", calories: 50 },
+            { name: "五爪蘋果", calories: 50 },
+            { name: "紅龍果", calories: 50 },
+            { name: "甘蔗", calories: 51 },
+            { name: "嫩豆腐", calories: 51 },
+            { name: "木瓜", calories: 52 },
+            { name: "甜柿", calories: 52 },
+            { name: "奇異果", calories: 53 },
+            { name: "加州李", calories: 56 },
+            { name: "葡萄", calories: 57 },
+            { name: "酪梨", calories: 58 },
+            { name: "綠豆湯", calories: 59 },
+            { name: "豆花(花生)", calories: 59 },
+            { name: "荔枝", calories: 59 },
+            { name: "西洋梨", calories: 60 },
+            { name: "米漿", calories: 61 },
+            { name: "豆漿", calories: 64 },
+            { name: "百香果", calories: 66 },
+            { name: "柿子", calories: 68 },
+            { name: "櫻桃", calories: 71 },
+            { name: "紅豆湯", calories: 72 },
+            { name: "龍眼", calories: 73 },
+            { name: "傳統豆腐", calories: 88 },
+            { name: "馬鈴薯", calories: 81 },
+            { name: "香蕉", calories: 91 },
+            { name: "麻油辣腐乳", calories: 95 },
+            { name: "釋迦", calories: 104 },
+            { name: "玉米", calories: 111 },
+            { name: "米苔目", calories: 118 },
+            { name: "廣式芋頭粿", calories: 118 },
+            { name: "甘薯", calories: 124 },
+            { name: "毛豆", calories: 125 },
+            { name: "凍豆腐", calories: 127 },
+            { name: "芋頭", calories: 128 },
+            { name: "臭豆腐", calories: 133 },
+            { name: "小三角油豆腐", calories: 138 },
+            { name: "廣式蘿蔔糕", calories: 139 },
+            { name: "菱角", calories: 143 },
+            { name: "白飯", calories: 183 },
+            { name: "栗子(生)", calories: 186 },
+            { name: "寧波年糕", calories: 218 },
+            { name: "百頁豆腐", calories: 214 },
+            { name: "味噌", calories: 222 },
+            { name: "豆豉", calories: 228 },
+            { name: "素火腿", calories: 231 },
+            { name: "傳統年糕", calories: 240 },
+            { name: "饅頭", calories: 247 },
+            { name: "黑棗", calories: 254 },
+            { name: "紅棗", calories: 252 },
+            { name: "棺材板", calories: 262 },
+            { name: "豆豉(黑豆)", calories: 266 },
+            { name: "龍眼乾", calories: 273 },
+            { name: "乳酪蛋糕", calories: 280 },
+            { name: "全麥土司", calories: 290 },
+            { name: "白土司麵包", calories: 299 },
+            { name: "麵線", calories: 297 },
+            { name: "蚵仔麵線", calories: 305 },
+            { name: "葡萄乾", calories: 303 },
+            { name: "蓮子", calories: 321 },
+            { name: "燒餅", calories: 320 },
+            { name: "起司蛋糕", calories: 338 },
+            { name: "軟糖", calories: 339 },
+            { name: "巧克力蛋糕", calories: 340 },
+            { name: "綠豆", calories: 342 },
+            { name: "粉絲(冬粉)", calories: 349 },
+            { name: "米粉", calories: 357 },
+            { name: "西谷米", calories: 359 },
+            { name: "蜂蜜蛋糕", calories: 360 },
+            { name: "小麥", calories: 361 },
+            { name: "大麥片", calories: 368 },
+            { name: "小米", calories: 368 },
+            { name: "黑豆", calories: 371 },
+            { name: "薏仁", calories: 373 },
+            { name: "奶酥麵包", calories: 372 },
+            { name: "日式炸豆皮", calories: 385 },
+            { name: "菠蘿麵包", calories: 386 },
+            { name: "綠豆凸", calories: 389 },
+            { name: "黃豆", calories: 394 },
+            { name: "養生麥粉", calories: 401 },
+            { name: "牛舌餅", calories: 402 },
+            { name: "麥片", calories: 406 },
+            { name: "豆棗", calories: 419 },
+            { name: "核棗糕", calories: 422 },
+            { name: "口香糖", calories: 424 },
+            { name: "芝麻糊", calories: 455 },
+            { name: "月餅(棗泥)", calories: 416 },
+            { name: "牛奶糖", calories: 417 },
+            { name: "牛軋糖", calories: 459 },
+            { name: "太陽餅", calories: 460 },
+            { name: "蛋黃酥", calories: 461 },
+            { name: "素肉鬆", calories: 453 },
+            { name: "米果", calories: 486 },
+            { name: "花生貢糖", calories: 495 },
+            { name: "鳳梨酥", calories: 502 },
+            { name: "黑芝麻糖", calories: 513 },
+            { name: "白芝麻糖", calories: 517 },
+            { name: "西瓜子(玉桂)", calories: 525 },
+            { name: "蛋捲", calories: 541 },
+            { name: "花生糖", calories: 544 },
+            { name: "花生", calories: 553 },
+            { name: "葵瓜子", calories: 560 },
+            { name: "洋芋片", calories: 570 },
+            { name: "油條", calories: 558 },
+            { name: "泡芙(巧克力)", calories: 589 },
+            { name: "南瓜子(白瓜子)", calories: 603 },
+            { name: "花生果醬", calories: 627 },
+            { name: "腰果", calories: 631 },
+            { name: "開心果", calories: 633 },
+            { name: "芝麻醬", calories: 639 },
+            { name: "杏仁", calories: 639 },
+            { name: "杏仁果(蔥蒜)", calories: 664 },
+            { name: "核桃粒(生)", calories: 685 },
+            { name: "松子", calories: 716 },
+            { name: "夏威夷火山豆", calories: 770 }
+        ];
+
+        // 尋找最接近且小於等於消耗卡路里的食物，若不足最小食物則回傳最小食物
+        function getFoodEquivalent(kcal) {
+            const sorted = [...FOOD_DB].sort((a, b) => a.calories - b.calories);
+            const minFood = sorted[0];
+
+            if (kcal < minFood.calories) {
+                return { matched: false, food: minFood };
+            }
+
+            let best = sorted[0];
+            for (const f of sorted) {
+                if (f.calories <= kcal) {
+                    best = f;
+                } else {
+                    break;
+                }
+            }
+            return { matched: true, food: best };
+        }
+
         const APP = {
             user: { weight: 60, age: 25, gender: 'M' },
             isTracking: false,
@@ -513,8 +693,6 @@
             inputWeight: document.getElementById('inputWeight'),
             inputAge: document.getElementById('inputAge'),
             summaryUserInfo: document.getElementById('summaryUserInfo'),
-            btnUploadIMU: document.getElementById('btnUploadIMU'),
-            imuFileInput: document.getElementById('imuFileInput'),
             
             resultModal: document.getElementById('resultModal'),
             btnCloseResultModal: document.getElementById('btnCloseResultModal'),
@@ -522,7 +700,6 @@
             resDistance: document.getElementById('resDistance'),
             resDuration: document.getElementById('resDuration'),
             foodEquivalentText: document.getElementById('foodEquivalentText'),
-            foodEquivalentSub: document.getElementById('foodEquivalentSub'),
             
             btnOpenDetailModal: document.getElementById('btnOpenDetailModal'),
             detailModal: document.getElementById('detailModal'),
@@ -535,17 +712,24 @@
             detailPoints: document.getElementById('detailPoints'),
             detailSegments: document.getElementById('detailSegments'),
             detailStraight: document.getElementById('detailStraight'),
-            detailMaxSpeed: document.getElementById('detailMaxSpeed')
+            detailMaxSpeed: document.getElementById('detailMaxSpeed'),
+
+            btnOpenRouteMapModal: document.getElementById('btnOpenRouteMapModal'),
+            routeMapModal: document.getElementById('routeMapModal'),
+            btnCloseRouteMapModal: document.getElementById('btnCloseRouteMapModal'),
+            btnCloseRouteMapModal2: document.getElementById('btnCloseRouteMapModal2'),
+            historyRouteMap: document.getElementById('historyRouteMap')
         };
 
         let map = null;
         let userMarker = null;
         let actualTrackPolyline = null;
+        let historyRouteMapInstance = null;
+        let historyRoutePolyline = null;
 
-        // 載入 localStorage 歷史紀錄
         function loadHistoryFromStorage() {
             try {
-                const saved = localStorage.getItem('yuyu_gps_history');
+                const saved = localStorage.getItem('yuyu_gps_history_v2');
                 if (saved) {
                     APP.history = JSON.parse(saved);
                 }
@@ -556,11 +740,10 @@
 
         function saveHistoryToStorage() {
             try {
-                localStorage.setItem('yuyu_gps_history', JSON.stringify(APP.history));
+                localStorage.setItem('yuyu_gps_history_v2', JSON.stringify(APP.history));
             } catch (e) {}
         }
 
-        // 初始化側欄與導覽切換
         function initSidebar() {
             const toggleSidebar = (open) => {
                 if (open) {
@@ -611,7 +794,7 @@
 
             L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-            // 純 OpenStreetMap 圖磚
+            // 純 OpenStreetMap 圖磚 (無 API 限制與無浮水印)
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
@@ -735,8 +918,26 @@
             dom.sportStatusBadge.innerText = '已完成';
             dom.sportStatusBadge.className = 'text-[10px] text-slate-400 bg-slate-700/50 px-1.5 py-0.5 rounded';
 
+            // 檢查是否完全靜止（熱量為 0 或歷時極短無效）
+            if (APP.totalCalories <= 0.1 || APP.totalDistanceMeters < 3.0) {
+                alertUserModalCustom("本次運動消耗為 0 或未產生有效移動，將不予儲存！");
+                return;
+            }
+
             generateSessionMetrics();
             showWorkoutResultModal();
+        }
+
+        function alertUserModalCustom(msg) {
+            dom.resCalories.innerText = "0.0";
+            dom.resDistance.innerText = "0.00";
+            dom.resDuration.innerText = "00:00";
+            dom.foodEquivalentText.innerText = msg;
+            dom.resultModal.classList.remove('hidden');
+            // 點擊返回時直接略過儲存
+            dom.btnCloseResultModal.onclick = () => {
+                dom.resultModal.classList.add('hidden');
+            };
         }
 
         function handleGpsPosition(pos) {
@@ -818,17 +1019,13 @@
             dom.metricDuration.innerText = `${m}:${s}`;
         }
 
-        // 計算 8 項詳細運動數據
         function generateSessionMetrics() {
             const distKm = APP.totalDistanceMeters / 1000;
             const durationHrs = APP.elapsedSeconds > 0 ? (APP.elapsedSeconds / 3600) : 0.0001;
             const avgSpeedKmh = distKm / durationHrs;
             const validPoints = APP.recordedPath.length;
-            
-            // 計算段數 (每超過一定距離或時間算一段，若無路徑點則至少1段)
             const segments = Math.max(1, Math.floor(validPoints / 5));
 
-            // 起點到終點直線距離
             let straightDistKm = 0;
             if (APP.recordedPath.length >= 2) {
                 const start = APP.recordedPath[0];
@@ -836,7 +1033,6 @@
                 straightDistKm = calculateDistanceMeters(start.lat, start.lng, end.lat, end.lng) / 1000;
             }
 
-            // 最快相鄰點速度
             let maxSpeed = 0;
             for (const p of APP.recordedPath) {
                 if (p.speed > maxSpeed) maxSpeed = p.speed;
@@ -849,14 +1045,15 @@
             APP.currentSessionMetrics = {
                 id: 'REC_' + Date.now(),
                 dateStr: new Date().toLocaleString('zh-TW', { hour12: false }),
-                totalDistance: distKm.toFixed(2), // km
+                totalDistance: distKm.toFixed(2),
                 durationTime: timeStr,
-                avgSpeed: avgSpeedKmh.toFixed(1), // km/h
-                calories: APP.totalCalories.toFixed(1), // kcal
+                avgSpeed: avgSpeedKmh.toFixed(1),
+                calories: APP.totalCalories.toFixed(1),
                 validPoints: validPoints,
                 segments: segments,
-                straightDistance: straightDistKm.toFixed(2), // km
-                maxInstantSpeed: maxSpeed.toFixed(1) // km/h
+                straightDistance: straightDistKm.toFixed(2),
+                maxInstantSpeed: maxSpeed.toFixed(1),
+                pathCoordinates: [...APP.recordedPath]
             };
         }
 
@@ -869,18 +1066,25 @@
             const s = (APP.elapsedSeconds % 60).toString().padStart(2, '0');
             dom.resDuration.innerText = `${m}:${s}`;
 
-            // 食物換算：一碗白飯約 160-200 卡 (以 180 卡為基準進行換算)
-            const riceBowls = (kcal / 180).toFixed(1);
-
-            let mainMsg = `你消耗了 <span class="text-amber-400 font-black text-xl">${riceBowls}</span> 碗白飯的卡路里！繼續加油！`;
-            if (kcal < 5) {
-                mainMsg = `本次運動時間較短，消耗了少量卡路里，再多動一下就能多燒掉一碗白飯喔！`;
+            // 對照食物資料庫
+            const equiv = getFoodEquivalent(kcal);
+            let message = "";
+            if (equiv.matched) {
+                message = `太好了！這次的運動你消耗了一個${equiv.food.name}（約${equiv.food.calories}大卡）！繼續保持！`;
+            } else {
+                message = `不錯喔！有運動！再多動一下就消耗${equiv.food.name}（約${equiv.food.calories}大卡）了呢！繼續加油！`;
             }
 
-            dom.foodEquivalentText.innerHTML = mainMsg;
-            dom.foodEquivalentSub.innerHTML = `(資訊對照：1碗白飯卡路里約為 160-200 卡，您本次燃燒 ${kcal.toFixed(1)} 卡)`;
-
+            dom.foodEquivalentText.innerText = message;
             dom.resultModal.classList.remove('hidden');
+
+            dom.btnCloseResultModal.onclick = () => {
+                if (APP.currentSessionMetrics) {
+                    APP.history.unshift(APP.currentSessionMetrics);
+                    saveHistoryToStorage();
+                }
+                dom.resultModal.classList.add('hidden');
+            };
         }
 
         function populateDetailModal(metrics) {
@@ -892,6 +1096,30 @@
             dom.detailSegments.innerText = metrics.segments + ' 段';
             dom.detailStraight.innerText = metrics.straightDistance + ' km';
             dom.detailMaxSpeed.innerText = metrics.maxInstantSpeed + ' km/h';
+        }
+
+        function openRouteMapModal(metrics) {
+            dom.routeMapModal.classList.remove('hidden');
+            setTimeout(() => {
+                if (!historyRouteMapInstance) {
+                    historyRouteMapInstance = L.map('historyRouteMap', { zoomControl: false });
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(historyRouteMapInstance);
+                } else {
+                    historyRouteMapInstance.invalidateSize();
+                }
+
+                if (historyRoutePolyline) {
+                    historyRouteMapInstance.removeLayer(historyRoutePolyline);
+                }
+
+                if (metrics.pathCoordinates && metrics.pathCoordinates.length > 0) {
+                    const latlngs = metrics.pathCoordinates.map(p => [p.lat, p.lng]);
+                    historyRoutePolyline = L.polyline(latlngs, { color: '#06b6d4', weight: 5, opacity: 0.9 }).addTo(historyRouteMapInstance);
+                    historyRouteMapInstance.fitBounds(historyRoutePolyline.getBounds(), { padding: [30, 30] });
+                } else {
+                    historyRouteMapInstance.setView([24.16235, 120.63885], 15);
+                }
+            }, 250);
         }
 
         function renderHistoryList() {
@@ -907,7 +1135,9 @@
             }
 
             APP.history.forEach((rec, idx) => {
-                const riceBowls = (parseFloat(rec.calories) / 180).toFixed(1);
+                const equiv = getFoodEquivalent(parseFloat(rec.calories));
+                const foodStr = equiv.matched ? `消耗了一個${equiv.food.name}` : `接近${equiv.food.name}`;
+
                 const card = document.createElement('div');
                 card.className = "bg-slate-800/90 border border-slate-700/80 rounded-2xl p-4 shadow-md flex flex-col gap-3";
                 card.innerHTML = `
@@ -929,21 +1159,26 @@
                             <div class="digital-font text-base font-bold text-emerald-400">${rec.durationTime}</div>
                         </div>
                     </div>
-                    <div class="flex items-center justify-between pt-1">
+                    <div class="flex items-center justify-between pt-1 flex-wrap gap-2">
                         <div class="text-[11px] text-slate-300 flex items-center gap-1.5">
-                            <i class="fa-solid fa-bowl-rice text-amber-400"></i>
-                            <span>相當於消耗 <b>${riceBowls}</b> 碗白飯 (160-200卡/碗)</span>
+                            <i class="fa-solid fa-utensils text-amber-400"></i>
+                            <span>${foodStr}</span>
                         </div>
-                        <button class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 history-detail-btn" data-id="${rec.id}">
-                            <i class="fa-solid fa-chart-line"></i>
-                            <span>詳細數據</span>
-                        </button>
+                        <div class="flex items-center gap-1.5">
+                            <button class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 history-route-btn" data-id="${rec.id}">
+                                <i class="fa-solid fa-map-location-dot"></i>
+                                <span>路線圖</span>
+                            </button>
+                            <button class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 history-detail-btn" data-id="${rec.id}">
+                                <i class="fa-solid fa-chart-line"></i>
+                                <span>詳細數據</span>
+                            </button>
+                        </div>
                     </div>
                 `;
                 dom.historyListContainer.appendChild(card);
             });
 
-            // 綁定歷史卡片中的詳細數據按鈕
             document.querySelectorAll('.history-detail-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const id = e.currentTarget.dataset.id;
@@ -954,9 +1189,18 @@
                     }
                 });
             });
+
+            document.querySelectorAll('.history-route-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const found = APP.history.find(h => h.id === id);
+                    if (found) {
+                        openRouteMapModal(found);
+                    }
+                });
+            });
         }
 
-        // 事件綁定
         dom.btnToggleWorkout.addEventListener('click', async () => {
             if (!APP.isTracking) { await requestMotionPermission(); startTrackingLoop(); }
             else { stopTrackingLoop(); }
@@ -1001,16 +1245,17 @@
             }
         });
 
-        dom.btnCloseResultModal.addEventListener('click', () => {
+        dom.btnOpenRouteMapModal.addEventListener('click', () => {
             if (APP.currentSessionMetrics) {
-                APP.history.unshift(APP.currentSessionMetrics);
-                saveHistoryToStorage();
+                openRouteMapModal(APP.currentSessionMetrics);
             }
-            dom.resultModal.classList.add('hidden');
         });
 
         dom.btnCloseDetailModal.addEventListener('click', () => dom.detailModal.classList.add('hidden'));
         dom.btnCloseDetailModal2.addEventListener('click', () => dom.detailModal.classList.add('hidden'));
+
+        dom.btnCloseRouteMapModal.addEventListener('click', () => dom.routeMapModal.classList.add('hidden'));
+        dom.btnCloseRouteMapModal2.addEventListener('click', () => dom.routeMapModal.classList.add('hidden'));
 
         dom.btnClearHistory.addEventListener('click', () => {
             APP.history = [];
