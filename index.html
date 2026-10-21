@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>YUYU的卡路里GPS - 智慧運動感測與食物換算</title>
+    <title>YUYU的卡路里GPS - 智慧運動感測與雲端紀錄</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -52,6 +52,14 @@
             min-height: 380px;
             z-index: 10;
         }
+        .mini-map {
+            width: 72px;
+            height: 72px;
+            border-radius: 12px;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 5;
+        }
         @keyframes pulse-ring {
             0% { transform: scale(0.6); opacity: 0.9; }
             80%, 100% { transform: scale(2.2); opacity: 0; }
@@ -82,6 +90,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between select-none overflow-x-hidden">
 
+    <!-- 頂部導覽列 -->
     <header class="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 sticky top-0 z-40 flex items-center justify-between shadow-lg">
         <div class="flex items-center space-x-3">
             <button id="btnOpenSidebar" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 flex items-center justify-center transition active:scale-95 shadow-md">
@@ -105,15 +114,21 @@
         </div>
 
         <div class="flex items-center space-x-2 shrink-0">
+            <!-- Google 帳號登入按鈕 -->
+            <button id="btnGoogleAuth" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5 shadow-sm">
+                <i class="fa-brands fa-google text-emerald-400"></i>
+                <span id="authButtonText">登入Google帳號</span>
+            </button>
             <button id="btnOpenUserModal" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
                 <i class="fa-solid fa-sliders text-emerald-400"></i>
-                <span>個人體態</span>
+                <span>體態</span>
             </button>
         </div>
     </header>
 
+    <!-- 側欄遮罩與抽屜 -->
     <div id="sidebarOverlay" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300"></div>
-    <aside id="sidebarDrawer" class="fixed top-0 bottom-0 left-0 z-50 w-72 bg-slate-950 border-r border-slate-800 p-5 flex flex-col justify-between shadow-2xl transform -translate-x-full sidebar-transition">
+    <aside id="sidebarDrawer" class="fixed top-0 bottom-0 left-0 z-50 w-80 bg-slate-950 border-r border-slate-800 p-5 flex flex-col justify-between shadow-2xl transform -translate-x-full sidebar-transition">
         <div class="space-y-6">
             <div class="flex items-center justify-between border-b border-slate-800 pb-4">
                 <div class="flex items-center space-x-3">
@@ -122,7 +137,7 @@
                     </div>
                     <div>
                         <h2 class="font-bold text-white text-sm">功能導覽</h2>
-                        <p class="text-[10px] text-slate-400">YUYU Navigation</p>
+                        <p class="text-[10px] text-slate-400" id="sidebarUserEmail">尚未登入雲端帳號</p>
                     </div>
                 </div>
                 <button id="btnCloseSidebar" class="w-8 h-8 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center border border-slate-800">
@@ -137,13 +152,13 @@
                 </button>
                 <button id="navTabHistory" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left">
                     <i class="fa-solid fa-clock-rotate-left text-cyan-400 text-base w-5"></i>
-                    <span>運動紀錄</span>
+                    <span>運動紀錄 (雲端同步)</span>
                 </button>
             </nav>
         </div>
 
         <div class="pt-4 border-t border-slate-800 text-[11px] text-slate-500 text-center">
-            YUYU's Calorie GPS v2.6 &copy; 2026
+            YUYU's Calorie GPS v2.8 &copy; 2026
         </div>
     </aside>
 
@@ -163,7 +178,7 @@
                         <span class="text-xs text-slate-400">kcal</span>
                     </div>
                     <div class="text-[10px] text-slate-500 mt-1 truncate">
-                        衛福部公式: MET × 體重 × 時間
+                        靜止狀態自動停止累計
                     </div>
                 </div>
 
@@ -261,9 +276,9 @@
             <div class="flex items-center justify-between bg-slate-800/90 p-4 rounded-2xl border border-slate-700 shadow-md">
                 <div>
                     <h2 class="text-base font-bold text-white flex items-center gap-2">
-                        <i class="fa-solid fa-clock-rotate-left text-cyan-400"></i> 歷史運動紀錄與路線圖
+                        <i class="fa-solid fa-clock-rotate-left text-cyan-400"></i> 歷史運動紀錄與雲端同步
                     </h2>
-                    <p class="text-xs text-slate-400 mt-0.5">檢視過去每次運動的 8 大詳細指標、食物換算與運動路線圖</p>
+                    <p class="text-xs text-slate-400 mt-0.5">點擊左側縮圖可檢視路線，右側呈現日期、時長與里程</p>
                 </div>
                 <button id="btnClearHistory" class="px-3 py-2 bg-rose-950/50 hover:bg-rose-900 text-rose-300 rounded-xl text-xs font-semibold border border-rose-800/80 transition flex items-center gap-1.5">
                     <i class="fa-solid fa-trash-can"></i>
@@ -455,8 +470,13 @@
         </div>
     </div>
 
-    <script>
-        // 根據您上傳的諾華健康諮詢中心 / 衛福部食品營養成分資料庫整理的完整食物熱量對照表 (每100公克)
+    <!-- Firebase SDK 導入 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 諾華健康諮詢中心 / 衛福部食品營養成分資料庫 (每100公克)
         const FOOD_DB = [
             { name: "椰子", calories: 18 },
             { name: "西瓜", calories: 25 },
@@ -599,7 +619,6 @@
             { name: "夏威夷火山豆", calories: 770 }
         ];
 
-        // 尋找最接近且小於等於消耗卡路里的食物，若不足最小食物則回傳最小食物
         function getFoodEquivalent(kcal) {
             const sorted = [...FOOD_DB].sort((a, b) => a.calories - b.calories);
             const minFood = sorted[0];
@@ -634,7 +653,7 @@
             currentMET: 0.0,
             
             lastCoord: null,
-            recordedPath: [], // 存放 {lat, lng, speed, timestamp}
+            recordedPath: [], 
             gpsWatchId: null,
             
             imuSupported: false,
@@ -644,7 +663,8 @@
             wakeLock: null,
             
             history: [],
-            currentSessionMetrics: null
+            currentSessionMetrics: null,
+            currentUser: null
         };
 
         const HPA_MET_TABLE = {
@@ -662,12 +682,15 @@
             btnCloseSidebar: document.getElementById('btnCloseSidebar'),
             sidebarOverlay: document.getElementById('sidebarOverlay'),
             sidebarDrawer: document.getElementById('sidebarDrawer'),
+            sidebarUserEmail: document.getElementById('sidebarUserEmail'),
             navTabWorkout: document.getElementById('navTabWorkout'),
             navTabHistory: document.getElementById('navTabHistory'),
             viewWorkout: document.getElementById('viewWorkout'),
             viewHistory: document.getElementById('viewHistory'),
             historyListContainer: document.getElementById('historyListContainer'),
             btnClearHistory: document.getElementById('btnClearHistory'),
+            btnGoogleAuth: document.getElementById('btnGoogleAuth'),
+            authButtonText: document.getElementById('authButtonText'),
             
             metricCalories: document.getElementById('metricCalories'),
             metricDistance: document.getElementById('metricDistance'),
@@ -727,21 +750,110 @@
         let historyRouteMapInstance = null;
         let historyRoutePolyline = null;
 
-        function loadHistoryFromStorage() {
+        // Firebase 初始化與設定
+        let db = null;
+        let auth = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'yuyu-calorie-gps-v2';
+
+        async function initFirebase() {
             try {
-                const saved = localStorage.getItem('yuyu_gps_history_v2');
-                if (saved) {
-                    APP.history = JSON.parse(saved);
+                if (typeof __firebase_config !== 'undefined') {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            APP.currentUser = user;
+                            if (user.isAnonymous) {
+                                dom.authButtonText.innerText = "訪客登入中";
+                                dom.sidebarUserEmail.innerText = "訪客模式 (本機儲存)";
+                            } else {
+                                dom.authButtonText.innerText = user.displayName || user.email || "已登入";
+                                dom.sidebarUserEmail.innerText = user.email || user.uid;
+                            }
+                            loadHistoryFromCloud();
+                        }
+                    });
                 }
-            } catch (e) {
-                APP.history = [];
+            } catch (err) {
+                console.warn("Firebase init fallback:", err);
             }
         }
 
-        function saveHistoryToStorage() {
+        // Google 登入彈窗
+        dom.btnGoogleAuth.addEventListener('click', async () => {
+            if (!auth) {
+                alertUserModalCustom("雲端尚未就緒，請稍後再試！");
+                return;
+            }
             try {
-                localStorage.setItem('yuyu_gps_history_v2', JSON.stringify(APP.history));
-            } catch (e) {}
+                const provider = new GoogleAuthProvider();
+                const result = await signInWithPopup(auth, provider);
+                APP.currentUser = result.user;
+                dom.authButtonText.innerText = result.user.displayName || "已登入";
+                dom.sidebarUserEmail.innerText = result.user.email;
+                loadHistoryFromCloud();
+                alertUserModalCustom(`歡迎回來，${result.user.displayName || 'Google 用戶'}！運動紀錄已同步至雲端。`);
+            } catch (e) {
+                console.warn("Google Signin error:", e);
+            }
+        });
+
+        async function saveHistoryToCloud(record) {
+            APP.history.unshift(record);
+            renderHistoryList();
+
+            if (!db || !auth || !auth.currentUser) return;
+            try {
+                const userId = auth.currentUser.uid;
+                const colRef = collection(db, 'artifacts', appId, 'users', userId, 'workouts');
+                await addDoc(colRef, record);
+            } catch (e) {
+                console.warn("Cloud save error:", e);
+            }
+        }
+
+        async function loadHistoryFromCloud() {
+            if (!db || !auth || !auth.currentUser) return;
+            try {
+                const userId = auth.currentUser.uid;
+                const colRef = collection(db, 'artifacts', appId, 'users', userId, 'workouts');
+                const snapshot = await getDocs(colRef);
+                const cloudList = [];
+                snapshot.forEach(docSnap => {
+                    cloudList.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                if (cloudList.length > 0) {
+                    APP.history = cloudList.sort((a,b) => b.id.localeCompare(a.id));
+                    renderHistoryList();
+                }
+            } catch (e) {
+                console.warn("Cloud load error:", e);
+            }
+        }
+
+        async function clearCloudHistory() {
+            APP.history = [];
+            renderHistoryList();
+            if (!db || !auth || !auth.currentUser) return;
+            try {
+                const userId = auth.currentUser.uid;
+                const colRef = collection(db, 'artifacts', appId, 'users', userId, 'workouts');
+                const snapshot = await getDocs(colRef);
+                for (const d of snapshot.docs) {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'workouts', d.id));
+                }
+            } catch (e) {
+                console.warn("Clear cloud error:", e);
+            }
         }
 
         function initSidebar() {
@@ -794,7 +906,6 @@
 
             L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-            // 純 OpenStreetMap 圖磚 (無 API 限制與無浮水印)
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
@@ -920,7 +1031,7 @@
 
             // 檢查是否完全靜止（熱量為 0 或歷時極短無效）
             if (APP.totalCalories <= 0.1 || APP.totalDistanceMeters < 3.0) {
-                alertUserModalCustom("本次運動消耗為 0 或未產生有效移動，將不予儲存！");
+                alertUserModalCustom("本次運動消耗為 0 將不儲存！");
                 return;
             }
 
@@ -934,7 +1045,6 @@
             dom.resDuration.innerText = "00:00";
             dom.foodEquivalentText.innerText = msg;
             dom.resultModal.classList.remove('hidden');
-            // 點擊返回時直接略過儲存
             dom.btnCloseResultModal.onclick = () => {
                 dom.resultModal.classList.add('hidden');
             };
@@ -953,6 +1063,7 @@
                 const dist = calculateDistanceMeters(APP.lastCoord.lat, APP.lastCoord.lng, latitude, longitude);
                 const timeDiffSec = Math.max(0.5, (now - APP.lastCoord.timestamp) / 1000);
 
+                // GPS 死區過濾（小於 3.5 公尺視為原地靜止漂移）
                 if (dist > 3.5) {
                     const calcSpeedKmh = (dist / timeDiffSec) * 3.6;
                     APP.currentSpeedKmh = (speed !== null && speed >= 0) ? (speed * 3.6) : calcSpeedKmh;
@@ -963,6 +1074,9 @@
                     dom.metricDistance.innerText = (APP.totalDistanceMeters / 1000).toFixed(2);
                     dom.metricSpeed.innerText = APP.currentSpeedKmh.toFixed(1);
                     APP.lastCoord = { lat: latitude, lng: longitude, timestamp: now };
+                } else {
+                    APP.currentSpeedKmh = 0.0;
+                    dom.metricSpeed.innerText = '0.0';
                 }
             } else {
                 APP.lastCoord = { lat: latitude, lng: longitude, timestamp: now };
@@ -979,6 +1093,14 @@
             const v = APP.currentSpeedKmh;
             const spm = APP.currentCadenceSPM;
 
+            // 靜止狀態嚴格歸零保護：時速 < 1.0 km/h 且步頻 < 35 SPM 時，MET 強制為 0.0
+            if (v < 1.0 && spm < 35) {
+                APP.currentMET = 0.0;
+                dom.sportModeName.innerText = '靜止休息';
+                dom.currentMetText.innerText = '0.0 MET';
+                return; // 卡路里完全不增加
+            }
+
             if (v > 16.0 && spm < 45) {
                 APP.isTransitFraud = true;
                 dom.transitWarning.classList.remove('hidden');
@@ -992,9 +1114,7 @@
             }
 
             let selectedMode = HPA_MET_TABLE.REST;
-            if (v < 1.0 && spm < 35) {
-                selectedMode = HPA_MET_TABLE.REST;
-            } else if (v >= 1.0 && v < 5.0) {
+            if (v >= 1.0 && v < 5.0) {
                 selectedMode = HPA_MET_TABLE.WALK_SLOW;
             } else if ((v >= 5.0 && v < 7.2) || (spm > 105 && spm <= 135)) {
                 selectedMode = HPA_MET_TABLE.WALK_BRISK;
@@ -1066,11 +1186,10 @@
             const s = (APP.elapsedSeconds % 60).toString().padStart(2, '0');
             dom.resDuration.innerText = `${m}:${s}`;
 
-            // 對照食物資料庫
             const equiv = getFoodEquivalent(kcal);
             let message = "";
             if (equiv.matched) {
-                message = `太好了！這次的運動你消耗了一個${equiv.food.name}（約${equiv.food.calories}大卡）！繼續保持！`;
+                message = `太好了！這次的運動你消耗了一個${equiv.food.name}！繼續保持！`;
             } else {
                 message = `不錯喔！有運動！再多動一下就消耗${equiv.food.name}（約${equiv.food.calories}大卡）了呢！繼續加油！`;
             }
@@ -1080,8 +1199,7 @@
 
             dom.btnCloseResultModal.onclick = () => {
                 if (APP.currentSessionMetrics) {
-                    APP.history.unshift(APP.currentSessionMetrics);
-                    saveHistoryToStorage();
+                    saveHistoryToCloud(APP.currentSessionMetrics);
                 }
                 dom.resultModal.classList.add('hidden');
             };
@@ -1136,51 +1254,63 @@
 
             APP.history.forEach((rec, idx) => {
                 const equiv = getFoodEquivalent(parseFloat(rec.calories));
-                const foodStr = equiv.matched ? `消耗了一個${equiv.food.name}` : `接近${equiv.food.name}`;
+                const foodStr = equiv.matched ? `消耗一個${equiv.food.name}` : `接近${equiv.food.name}`;
 
                 const card = document.createElement('div');
-                card.className = "bg-slate-800/90 border border-slate-700/80 rounded-2xl p-4 shadow-md flex flex-col gap-3";
+                card.className = "bg-slate-800/90 border border-slate-700/80 rounded-2xl p-3 shadow-md flex items-center justify-between gap-3 hover:border-emerald-500/50 transition cursor-pointer history-card-item";
+                card.dataset.id = rec.id;
+                
                 card.innerHTML = `
-                    <div class="flex justify-between items-center border-b border-slate-700/60 pb-2">
-                        <span class="text-xs font-mono text-emerald-400"><i class="fa-solid fa-calendar-days mr-1"></i>${rec.dateStr}</span>
-                        <span class="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded">紀錄 #${APP.history.length - idx}</span>
-                    </div>
-                    <div class="grid grid-cols-3 gap-2 text-center">
-                        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                            <div class="text-[10px] text-slate-400">消耗熱量</div>
-                            <div class="digital-font text-base font-bold text-amber-400">${rec.calories} <span class="text-[10px]">kcal</span></div>
+                    <div class="flex items-center space-x-3 flex-1 min-w-0">
+                        <div class="mini-map shrink-0 bg-slate-900 border border-slate-700 relative flex items-center justify-center mini-map-box" id="miniMap_${rec.id}">
+                            <i class="fa-solid fa-route text-cyan-400 text-lg"></i>
                         </div>
-                        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                            <div class="text-[10px] text-slate-400">總距離</div>
-                            <div class="digital-font text-base font-bold text-cyan-300">${rec.totalDistance} <span class="text-[10px]">km</span></div>
-                        </div>
-                        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                            <div class="text-[10px] text-slate-400">運動時間</div>
-                            <div class="digital-font text-base font-bold text-emerald-400">${rec.durationTime}</div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-[11px] font-mono text-emerald-400 truncate"><i class="fa-solid fa-calendar-days mr-1"></i>${rec.dateStr}</div>
+                            <div class="flex items-center gap-3 mt-1 text-xs">
+                                <span class="text-slate-300 font-bold"><i class="fa-solid fa-stopwatch text-indigo-400 mr-1"></i>${rec.durationTime}</span>
+                                <span class="text-cyan-300 font-bold"><i class="fa-solid fa-route text-cyan-400 mr-1"></i>${rec.totalDistance} km</span>
+                            </div>
+                            <div class="text-[10px] text-amber-400 mt-0.5 truncate">
+                                <i class="fa-solid fa-utensils mr-1"></i>${foodStr} (${rec.calories} kcal)
+                            </div>
                         </div>
                     </div>
-                    <div class="flex items-center justify-between pt-1 flex-wrap gap-2">
-                        <div class="text-[11px] text-slate-300 flex items-center gap-1.5">
-                            <i class="fa-solid fa-utensils text-amber-400"></i>
-                            <span>${foodStr}</span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                            <button class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 history-route-btn" data-id="${rec.id}">
-                                <i class="fa-solid fa-map-location-dot"></i>
-                                <span>路線圖</span>
-                            </button>
-                            <button class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 history-detail-btn" data-id="${rec.id}">
-                                <i class="fa-solid fa-chart-line"></i>
-                                <span>詳細數據</span>
-                            </button>
-                        </div>
+                    <div class="shrink-0 flex items-center gap-1.5">
+                        <button class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-slate-700 text-cyan-400 flex items-center justify-center border border-slate-700 transition history-route-btn" data-id="${rec.id}" title="查看路線圖">
+                            <i class="fa-solid fa-map-location-dot text-xs"></i>
+                        </button>
+                        <button class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-slate-700 text-emerald-400 flex items-center justify-center border border-slate-700 transition history-detail-btn" data-id="${rec.id}" title="詳細數據">
+                            <i class="fa-solid fa-chart-line text-xs"></i>
+                        </button>
                     </div>
                 `;
                 dom.historyListContainer.appendChild(card);
+
+                // 非同步初始化小地圖縮圖
+                setTimeout(() => {
+                    const containerId = `miniMap_${rec.id}`;
+                    const el = document.getElementById(containerId);
+                    if (el && rec.pathCoordinates && rec.pathCoordinates.length > 0) {
+                        el.innerHTML = '';
+                        const miniMap = L.map(containerId, {
+                            attributionControl: false,
+                            zoomControl: false,
+                            dragging: false,
+                            scrollWheelZoom: false,
+                            doubleClickZoom: false
+                        });
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(miniMap);
+                        const latlngs = rec.pathCoordinates.map(p => [p.lat, p.lng]);
+                        const polyline = L.polyline(latlngs, { color: '#06b6d4', weight: 4 }).addTo(miniMap);
+                        miniMap.fitBounds(polyline.getBounds(), { padding: [5, 5] });
+                    }
+                }, 100);
             });
 
             document.querySelectorAll('.history-detail-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     const id = e.currentTarget.dataset.id;
                     const found = APP.history.find(h => h.id === id);
                     if (found) {
@@ -1192,6 +1322,7 @@
 
             document.querySelectorAll('.history-route-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     const id = e.currentTarget.dataset.id;
                     const found = APP.history.find(h => h.id === id);
                     if (found) {
@@ -1258,15 +1389,13 @@
         dom.btnCloseRouteMapModal2.addEventListener('click', () => dom.routeMapModal.classList.add('hidden'));
 
         dom.btnClearHistory.addEventListener('click', () => {
-            APP.history = [];
-            saveHistoryToStorage();
-            renderHistoryList();
+            clearCloudHistory();
         });
 
         window.onload = function() {
-            loadHistoryFromStorage();
             initSidebar();
             initMap();
+            initFirebase();
         };
     </script>
 </body>
