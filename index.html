@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>YUYU的卡路里GPS - 智慧運動感測與食物換算</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#ecfdf5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            900: '#064e3b'
+                        },
+                        slate: {
+                            850: '#151f32',
+                            950: '#020617'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet.js (免 API 地圖引擎 + 純 OpenStreetMap) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .digital-font {
+            font-family: 'Chakra Petch', monospace;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            min-height: 380px;
+            z-index: 10;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.6); opacity: 0.9; }
+            80%, 100% { transform: scale(2.2); opacity: 0; }
+        }
+        .pulse-marker-ring {
+            position: absolute;
+            left: -11px;
+            top: -11px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: rgba(16, 185, 129, 0.45);
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        .pulse-marker-dot {
+            position: relative;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background-color: #10b981;
+            border: 2.5px solid #ffffff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.4);
+        }
+        /* Sidebar transition */
+        .sidebar-transition {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between select-none overflow-x-hidden">
+
+    <header class="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 sticky top-0 z-40 flex items-center justify-between shadow-lg">
+        <div class="flex items-center space-x-3">
+            <!-- 側欄開關按鈕 -->
+            <button id="btnOpenSidebar" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 flex items-center justify-center transition active:scale-95 shadow-md">
+                <i class="fa-solid fa-bars text-lg"></i>
+            </button>
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black shadow-md shadow-emerald-500/20 text-xl shrink-0">
+                <i class="fa-solid fa-fire-flame-curved"></i>
+            </div>
+            <div>
+                <h1 class="text-sm sm:text-base font-bold tracking-tight text-white flex items-center gap-2">
+                    <span id="appHeaderTitle">YUYU的卡路里GPS</span>
+                    <span class="text-[10px] bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 px-2 py-0.5 rounded-full font-mono">
+                        <i class="fa-solid fa-utensils mr-1"></i>食物換算模式
+                    </span>
+                </h1>
+                <p class="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                    <span id="connectionDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span id="gpsStatusText">GPS & IMU 待命中</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2 shrink-0">
+            <!-- 體態設定按鈕 -->
+            <button id="btnOpenUserModal" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-sliders text-emerald-400"></i>
+                <span>個人體態</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 側欄抽屜 (Sidebar Drawer) -->
+    <div id="sidebarOverlay" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300"></div>
+    <aside id="sidebarDrawer" class="fixed top-0 bottom-0 left-0 z-50 w-72 bg-slate-950 border-r border-slate-800 p-5 flex flex-col justify-between shadow-2xl transform -translate-x-full sidebar-transition">
+        <div class="space-y-6">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black text-lg">
+                        <i class="fa-solid fa-compass"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-white text-sm">功能導覽</h2>
+                        <p class="text-[10px] text-slate-400">YUYU Navigation</p>
+                    </div>
+                </div>
+                <button id="btnCloseSidebar" class="w-8 h-8 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center border border-slate-800">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <nav class="space-y-2">
+                <button id="navTabWorkout" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-semibold text-xs transition text-left">
+                    <i class="fa-solid fa-person-running text-emerald-400 text-base w-5"></i>
+                    <span>開始運動</span>
+                </button>
+                <button id="navTabHistory" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left">
+                    <i class="fa-solid fa-clock-rotate-left text-cyan-400 text-base w-5"></i>
+                    <span>運動紀錄</span>
+                </button>
+            </nav>
+        </div>
+
+        <div class="pt-4 border-t border-slate-800 text-[11px] text-slate-500 text-center">
+            YUYU's Calorie GPS v2.5 &copy; 2026
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col p-3 gap-3 max-w-5xl mx-auto w-full">
+        <!-- 視圖 1：開始運動畫面 -->
+        <div id="viewWorkout" class="flex-1 flex flex-col gap-3">
+            <!-- 頂部即時核心運動數值四宮格卡片 -->
+            <section class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <!-- 1. 消耗熱量 -->
+                <div class="bg-slate-800/90 p-3.5 rounded-2xl border border-slate-700/80 shadow-md relative overflow-hidden">
+                    <div class="flex justify-between items-center text-xs text-slate-400 mb-1">
+                        <span class="flex items-center gap-1 font-medium"><i class="fa-solid fa-fire text-amber-500"></i> 淨消耗熱量</span>
+                        <span id="currentMetText" class="text-[10px] font-mono bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded">0.0 MET</span>
+                    </div>
+                    <div class="flex items-baseline gap-1 mt-1">
+                        <span id="metricCalories" class="digital-font text-2xl sm:text-3xl font-bold text-amber-400">0.0</span>
+                        <span class="text-xs text-slate-400">kcal</span>
+                    </div>
+                    <div class="text-[10px] text-slate-500 mt-1 truncate">
+                        衛福部公式: MET × 體重 × 時間
+                    </div>
+                </div>
+
+                <!-- 2. 運動里程與時速 -->
+                <div class="bg-slate-800/90 p-3.5 rounded-2xl border border-slate-700/80 shadow-md relative overflow-hidden">
+                    <div class="flex justify-between items-center text-xs text-slate-400 mb-1">
+                        <span class="flex items-center gap-1 font-medium"><i class="fa-solid fa-route text-cyan-400"></i> 運動里程</span>
+                        <span id="gpsAccText" class="text-[10px] font-mono text-slate-500">精度 --m</span>
+                    </div>
+                    <div class="flex items-baseline gap-1 mt-1">
+                        <span id="metricDistance" class="digital-font text-2xl sm:text-3xl font-bold text-cyan-300">0.00</span>
+                        <span class="text-xs text-slate-400">km</span>
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-1">
+                        時速: <span id="metricSpeed" class="font-bold text-white">0.0</span> km/h
+                    </div>
+                </div>
+
+                <!-- 3. IMU 步頻與步數 -->
+                <div class="bg-slate-800/90 p-3.5 rounded-2xl border border-slate-700/80 shadow-md relative overflow-hidden">
+                    <div class="flex justify-between items-center text-xs text-slate-400 mb-1">
+                        <span class="flex items-center gap-1 font-medium"><i class="fa-solid fa-person-running text-emerald-400"></i> IMU 步頻</span>
+                        <span id="motionSensorStatus" class="text-[10px] text-slate-500">待感測</span>
+                    </div>
+                    <div class="flex items-baseline gap-1 mt-1">
+                        <span id="metricCadence" class="digital-font text-2xl sm:text-3xl font-bold text-emerald-400">0</span>
+                        <span class="text-xs text-slate-400">SPM</span>
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-1">
+                        累計步數: <span id="metricSteps" class="font-bold text-white">0</span> 步
+                    </div>
+                </div>
+
+                <!-- 4. 運動時間與狀態 -->
+                <div class="bg-slate-800/90 p-3.5 rounded-2xl border border-slate-700/80 shadow-md relative overflow-hidden">
+                    <div class="flex justify-between items-center text-xs text-slate-400 mb-1">
+                        <span class="flex items-center gap-1 font-medium"><i class="fa-solid fa-stopwatch text-indigo-400"></i> 運動時間</span>
+                        <span id="sportStatusBadge" class="text-[10px] text-slate-400 bg-slate-700/60 px-1.5 py-0.5 rounded">未開始</span>
+                    </div>
+                    <div class="flex items-baseline gap-1 mt-1">
+                        <span id="metricDuration" class="digital-font text-2xl sm:text-3xl font-bold text-indigo-300">00:00</span>
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-1 truncate">
+                        狀態: <span id="sportModeName" class="font-semibold text-emerald-400">靜止休息</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 地圖區域 -->
+            <section class="relative flex-1 rounded-2xl overflow-hidden border border-slate-700/80 shadow-xl min-h-[380px] bg-slate-950">
+                <div id="map"></div>
+                <div class="absolute top-3 left-3 z-[400] flex flex-col gap-2">
+                    <button id="btnRecenter" class="w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 shadow-lg flex items-center justify-center transition active:scale-95" title="回到目前定位">
+                        <i class="fa-solid fa-location-crosshairs text-sm"></i>
+                    </button>
+                </div>
+                <div id="transitWarning" class="hidden absolute bottom-3 left-3 right-3 z-[400] bg-rose-900/95 backdrop-blur-md border border-rose-500 text-rose-100 px-3.5 py-2 rounded-xl text-xs flex items-center justify-between shadow-xl">
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-rose-400 text-sm"></i>
+                        <span>偵測到高速移動但無規律步頻（疑似搭車），已自動暫停運動熱量計算！</span>
+                    </span>
+                    <span class="text-[10px] bg-rose-800 px-2 py-0.5 rounded font-mono shrink-0">防弊啟動</span>
+                </div>
+            </section>
+
+            <!-- 控制列 -->
+            <section class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-800/80 p-3 rounded-2xl border border-slate-800">
+                <div class="flex items-center gap-3 text-xs text-slate-400">
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-weight-scale text-slate-500"></i>
+                        <span id="summaryUserInfo">體重: 60kg | 25歲</span>
+                    </div>
+                    <div class="h-3 w-px bg-slate-700"></div>
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-sun text-amber-400"></i>
+                        <span id="wakeLockStatus">防休眠開</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button id="btnUploadIMU" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-arrow-up text-cyan-400"></i>
+                        <span>上傳IMU</span>
+                    </button>
+                    <input type="file" id="imuFileInput" accept=".json,.csv" class="hidden" />
+
+                    <button id="btnToggleWorkout" class="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition active:scale-95">
+                        <i class="fa-solid fa-play"></i>
+                        <span id="btnWorkoutText">開始運動追蹤</span>
+                    </button>
+
+                    <button id="btnResetWorkout" class="p-2.5 rounded-xl bg-slate-800 hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 text-sm border border-slate-700 transition" title="重設運動資料">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <!-- 視圖 2：運動紀錄畫面 -->
+        <div id="viewHistory" class="hidden flex-1 flex flex-col gap-4">
+            <div class="flex items-center justify-between bg-slate-800/90 p-4 rounded-2xl border border-slate-700 shadow-md">
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-cyan-400"></i> 歷史運動紀錄
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-0.5">檢視過去每一次運動的詳細數據與食物等價換算</p>
+                </div>
+                <button id="btnClearHistory" class="px-3 py-2 bg-rose-950/50 hover:bg-rose-900 text-rose-300 rounded-xl text-xs font-semibold border border-rose-800/80 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>清除紀錄</span>
+                </button>
+            </div>
+
+            <!-- 紀錄列表容器 -->
+            <div id="historyListContainer" class="flex-1 space-y-3 overflow-y-auto max-h-[600px] pr-1">
+                <!-- 動態塞入紀錄卡片 -->
+            </div>
+        </div>
+    </main>
+
+    <!-- 體態設定 Modal -->
+    <div id="userModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-user text-emerald-400"></i> 個人體態與卡路里參數
+                </h3>
+                <button id="btnCloseUserModal" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1">體重 (kg)：</label>
+                    <input id="inputWeight" type="number" min="20" max="250" value="60" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">年齡 (歲)：</label>
+                    <input id="inputAge" type="number" min="5" max="120" value="25" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">性別：</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="btnGenderM" class="gender-btn py-2 rounded-xl border border-emerald-500 bg-emerald-500/20 text-emerald-300 font-semibold" data-gender="M">男</button>
+                        <button id="btnGenderF" class="gender-btn py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-400 font-semibold" data-gender="F">女</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-800 flex justify-end">
+                <button id="btnSaveUserModal" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition">
+                    儲存更新
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 運動結束結算與食物換算 Modal -->
+    <div id="resultModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-5 text-center relative shrink-0">
+                <div class="inline-flex w-14 h-14 bg-white/25 backdrop-blur-md rounded-2xl items-center justify-center text-amber-300 text-3xl mb-2 shadow-inner">
+                    <i class="fa-solid fa-utensils"></i>
+                </div>
+                <h3 class="text-xl font-black text-white">運動成果與食物換算！</h3>
+                <p class="text-xs text-emerald-100" id="resultSubtitle">太棒了！您的汗水化成了美味能量</p>
+            </div>
+
+            <div class="p-5 space-y-4 overflow-y-auto">
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-slate-800/80 p-2.5 rounded-2xl border border-slate-700">
+                        <div class="text-[10px] text-slate-400">總消耗</div>
+                        <div id="resCalories" class="digital-font text-lg font-bold text-amber-400">0.0</div>
+                        <div class="text-[9px] text-slate-500">kcal</div>
+                    </div>
+                    <div class="bg-slate-800/80 p-2.5 rounded-2xl border border-slate-700">
+                        <div class="text-[10px] text-slate-400">總距離</div>
+                        <div id="resDistance" class="digital-font text-lg font-bold text-cyan-300">0.00</div>
+                        <div class="text-[9px] text-slate-500">km</div>
+                    </div>
+                    <div class="bg-slate-800/80 p-2.5 rounded-2xl border border-slate-700">
+                        <div class="text-[10px] text-slate-400">運動歷時</div>
+                        <div id="resDuration" class="digital-font text-lg font-bold text-emerald-400">00:00</div>
+                        <div class="text-[9px] text-slate-500">分:秒</div>
+                    </div>
+                </div>
+
+                <!-- 食物換算動態看板 -->
+                <div class="bg-gradient-to-br from-slate-850 to-slate-900 p-4 rounded-2xl border border-emerald-500/40 text-center space-y-2 shadow-inner">
+                    <div class="text-xs text-emerald-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-bowl-rice text-amber-400"></i> 卡路里美食等價換算
+                    </div>
+                    <div id="foodEquivalentText" class="text-base sm:text-lg font-bold text-white leading-relaxed px-2">
+                        你消耗了 1 碗白飯的卡路里！繼續加油！
+                    </div>
+                    <div id="foodEquivalentSub" class="text-[11px] text-slate-400">
+                        (資訊對照：1碗白飯卡路里約為 160-200 卡)
+                    </div>
+                </div>
+
+                <!-- 查看詳細運動數據按鈕 -->
+                <button id="btnOpenDetailModal" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-bold text-xs border border-slate-700 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>查看詳細運動數據</span>
+                </button>
+
+                <button id="btnCloseResultModal" class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition">
+                    儲存紀錄並返回主頁
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 詳細運動數據 8 大指標 Modal -->
+    <div id="detailModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="bg-slate-850 p-4 border-b border-slate-800 flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-emerald-400"></i> 詳細運動數據報告 (8大指標)
+                </h3>
+                <button id="btnCloseDetailModal" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-4 space-y-3 overflow-y-auto text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
+                        <div class="text-slate-400 text-[11px]">1. 總距離 (Total Distance)</div>
+                        <div id="detailDist" class="digital-font text-lg font-bold text-cyan-300 mt-0.5">0.00 km</div>
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
+                        <div class="text-slate-400 text-[11px]">2. 運動時間 (Duration)</div>
+                        <div id="detailTime" class="digital-font text-lg font-bold text-indigo-300 mt-0.5">00:00</div>
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
+                        <div class="text-slate-400 text-[11px]">3. 平均速度 (Average Speed)</div>
+                        <div id="detailAvgSpeed" class="digital-font text-lg font-bold text-white mt-0.5">0.0 km/h</div>
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
+                        <div class="text-slate-400 text-[11px]">4. 估算熱量 (Calories)</div>
+                        <div id="detailCals" class="digital-font text-lg font-bold text-amber-400 mt-0.5">0.0 kcal</div>
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
+                        <div class="text-slate-400 text-[11px]">5. 有效定位點數 (Valid GPS Points)</div>
+                        <div id="detailPoints" class="digital-font text-lg font-bold text-emerald-400 mt-0.5">0 點</div>
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
+                        <div class="text-slate-400 text-[11px]">6. 段數 (Segments)</div>
+                        <div id="detailSegments" class="digital-font text-lg font-bold text-teal-300 mt-0.5">0 段</div>
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
+                        <div class="text-slate-400 text-[11px]">7. 起點到終點直線距離 (Displacement)</div>
+                        <div id="detailStraight" class="digital-font text-lg font-bold text-purple-300 mt-0.5">0.00 km</div>
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
+                        <div class="text-slate-400 text-[11px]">8. 最快相鄰點速度 (Max Instant Speed)</div>
+                        <div id="detailMaxSpeed" class="digital-font text-lg font-bold text-rose-400 mt-0.5">0.0 km/h</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-slate-800 bg-slate-850 shrink-0">
+                <button id="btnCloseDetailModal2" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 transition">
+                    關閉詳細數據
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const APP = {
+            user: { weight: 60, age: 25, gender: 'M' },
+            isTracking: false,
+            startTime: null,
+            elapsedSeconds: 0,
+            timerInterval: null,
+            
+            totalCalories: 0.0,
+            totalDistanceMeters: 0.0,
+            totalSteps: 0,
+            currentSpeedKmh: 0.0,
+            currentCadenceSPM: 0,
+            currentMET: 0.0,
+            
+            lastCoord: null,
+            recordedPath: [], // 存放 {lat, lng, speed, timestamp}
+            gpsWatchId: null,
+            
+            imuSupported: false,
+            lastStepTimestamp: 0,
+            stepCounterTemp: 0,
+            isTransitFraud: false,
+            wakeLock: null,
+            
+            history: [],
+            currentSessionMetrics: null
+        };
+
+        const HPA_MET_TABLE = {
+            REST: { met: 0.0, name: '靜止休息' },
+            WALK_SLOW: { met: 3.5, name: '慢走(約4km/h)' },
+            WALK_BRISK: { met: 5.5, name: '快走健走(約6.0km/h)' },
+            JOGGING: { met: 8.2, name: '慢跑(約8km/h)' },
+            RUNNING_FAST: { met: 12.0, name: '跑(約12km/h)' },
+            SPRINT: { met: 16.0, name: '快跑衝刺(>14km/h)' }
+        };
+
+        const dom = {
+            appHeaderTitle: document.getElementById('appHeaderTitle'),
+            btnOpenSidebar: document.getElementById('btnOpenSidebar'),
+            btnCloseSidebar: document.getElementById('btnCloseSidebar'),
+            sidebarOverlay: document.getElementById('sidebarOverlay'),
+            sidebarDrawer: document.getElementById('sidebarDrawer'),
+            navTabWorkout: document.getElementById('navTabWorkout'),
+            navTabHistory: document.getElementById('navTabHistory'),
+            viewWorkout: document.getElementById('viewWorkout'),
+            viewHistory: document.getElementById('viewHistory'),
+            historyListContainer: document.getElementById('historyListContainer'),
+            btnClearHistory: document.getElementById('btnClearHistory'),
+            
+            metricCalories: document.getElementById('metricCalories'),
+            metricDistance: document.getElementById('metricDistance'),
+            metricSpeed: document.getElementById('metricSpeed'),
+            metricCadence: document.getElementById('metricCadence'),
+            metricSteps: document.getElementById('metricSteps'),
+            metricDuration: document.getElementById('metricDuration'),
+            currentMetText: document.getElementById('currentMetText'),
+            sportModeName: document.getElementById('sportModeName'),
+            sportStatusBadge: document.getElementById('sportStatusBadge'),
+            gpsStatusText: document.getElementById('gpsStatusText'),
+            gpsAccText: document.getElementById('gpsAccText'),
+            motionSensorStatus: document.getElementById('motionSensorStatus'),
+            transitWarning: document.getElementById('transitWarning'),
+            btnToggleWorkout: document.getElementById('btnToggleWorkout'),
+            btnWorkoutText: document.getElementById('btnWorkoutText'),
+            btnResetWorkout: document.getElementById('btnResetWorkout'),
+            btnRecenter: document.getElementById('btnRecenter'),
+            btnOpenUserModal: document.getElementById('btnOpenUserModal'),
+            btnCloseUserModal: document.getElementById('btnCloseUserModal'),
+            btnSaveUserModal: document.getElementById('btnSaveUserModal'),
+            userModal: document.getElementById('userModal'),
+            inputWeight: document.getElementById('inputWeight'),
+            inputAge: document.getElementById('inputAge'),
+            summaryUserInfo: document.getElementById('summaryUserInfo'),
+            btnUploadIMU: document.getElementById('btnUploadIMU'),
+            imuFileInput: document.getElementById('imuFileInput'),
+            
+            resultModal: document.getElementById('resultModal'),
+            btnCloseResultModal: document.getElementById('btnCloseResultModal'),
+            resCalories: document.getElementById('resCalories'),
+            resDistance: document.getElementById('resDistance'),
+            resDuration: document.getElementById('resDuration'),
+            foodEquivalentText: document.getElementById('foodEquivalentText'),
+            foodEquivalentSub: document.getElementById('foodEquivalentSub'),
+            
+            btnOpenDetailModal: document.getElementById('btnOpenDetailModal'),
+            detailModal: document.getElementById('detailModal'),
+            btnCloseDetailModal: document.getElementById('btnCloseDetailModal'),
+            btnCloseDetailModal2: document.getElementById('btnCloseDetailModal2'),
+            detailDist: document.getElementById('detailDist'),
+            detailTime: document.getElementById('detailTime'),
+            detailAvgSpeed: document.getElementById('detailAvgSpeed'),
+            detailCals: document.getElementById('detailCals'),
+            detailPoints: document.getElementById('detailPoints'),
+            detailSegments: document.getElementById('detailSegments'),
+            detailStraight: document.getElementById('detailStraight'),
+            detailMaxSpeed: document.getElementById('detailMaxSpeed')
+        };
+
+        let map = null;
+        let userMarker = null;
+        let actualTrackPolyline = null;
+
+        // 載入 localStorage 歷史紀錄
+        function loadHistoryFromStorage() {
+            try {
+                const saved = localStorage.getItem('yuyu_gps_history');
+                if (saved) {
+                    APP.history = JSON.parse(saved);
+                }
+            } catch (e) {
+                APP.history = [];
+            }
+        }
+
+        function saveHistoryToStorage() {
+            try {
+                localStorage.setItem('yuyu_gps_history', JSON.stringify(APP.history));
+            } catch (e) {}
+        }
+
+        // 初始化側欄與導覽切換
+        function initSidebar() {
+            const toggleSidebar = (open) => {
+                if (open) {
+                    dom.sidebarOverlay.classList.remove('hidden');
+                    setTimeout(() => dom.sidebarOverlay.classList.remove('opacity-0'), 10);
+                    dom.sidebarDrawer.classList.remove('-translate-x-full');
+                } else {
+                    dom.sidebarOverlay.classList.add('opacity-0');
+                    dom.sidebarDrawer.classList.add('-translate-x-full');
+                    setTimeout(() => dom.sidebarOverlay.classList.add('hidden'), 300);
+                }
+            };
+
+            dom.btnOpenSidebar.addEventListener('click', () => toggleSidebar(true));
+            dom.btnCloseSidebar.addEventListener('click', () => toggleSidebar(false));
+            dom.sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+
+            dom.navTabWorkout.addEventListener('click', () => {
+                toggleSidebar(false);
+                dom.viewWorkout.classList.remove('hidden');
+                dom.viewHistory.classList.add('hidden');
+                dom.navTabWorkout.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-semibold text-xs transition text-left";
+                dom.navTabHistory.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
+                dom.appHeaderTitle.innerText = "YUYU的卡路里GPS";
+                if (map) map.invalidateSize();
+            });
+
+            dom.navTabHistory.addEventListener('click', () => {
+                toggleSidebar(false);
+                dom.viewWorkout.classList.add('hidden');
+                dom.viewHistory.classList.remove('hidden');
+                dom.navTabHistory.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 font-semibold text-xs transition text-left";
+                dom.navTabWorkout.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
+                dom.appHeaderTitle.innerText = "運動歷史紀錄";
+                renderHistoryList();
+            });
+        }
+
+        function initMap() {
+            const defaultLat = 24.16235;
+            const defaultLng = 120.63885;
+
+            map = L.map('map', {
+                center: [defaultLat, defaultLng],
+                zoom: 16,
+                zoomControl: false
+            });
+
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            // 純 OpenStreetMap 圖磚
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+            }).addTo(map);
+
+            const pulseIcon = L.divIcon({
+                className: 'custom-user-marker',
+                html: '<div class="pulse-marker-ring"></div><div class="pulse-marker-dot"></div>',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+            });
+            userMarker = L.marker([defaultLat, defaultLng], { icon: pulseIcon }).addTo(map);
+
+            actualTrackPolyline = L.polyline([], {
+                color: '#10b981',
+                weight: 5,
+                opacity: 0.98,
+                lineJoin: 'round',
+                lineCap: 'round'
+            }).addTo(map);
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        const { latitude, longitude } = pos.coords;
+                        userMarker.setLatLng([latitude, longitude]);
+                        map.setView([latitude, longitude], 16);
+                        dom.gpsStatusText.innerText = 'GPS 定位正常';
+                    },
+                    err => {
+                        dom.gpsStatusText.innerText = 'GPS 預設區域';
+                    },
+                    { enableHighAccuracy: true, timeout: 6000 }
+                );
+            }
+        }
+
+        function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const phi1 = lat1 * Math.PI / 180;
+            const phi2 = lat2 * Math.PI / 180;
+            const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+            const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+                      Math.cos(phi1) * Math.cos(phi2) *
+                      Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        async function requestMotionPermission() {
+            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                try {
+                    const permissionState = await DeviceMotionEvent.requestPermission();
+                    if (permissionState === 'granted') {
+                        window.addEventListener('devicemotion', handleDeviceMotion, true);
+                        APP.imuSupported = true;
+                        dom.motionSensorStatus.innerText = 'IMU 運作中';
+                    }
+                } catch (e) {}
+            } else if ('DeviceMotionEvent' in window) {
+                window.addEventListener('devicemotion', handleDeviceMotion, true);
+                APP.imuSupported = true;
+                dom.motionSensorStatus.innerText = 'IMU 運作中';
+            }
+        }
+
+        function handleDeviceMotion(e) {
+            if (!APP.isTracking) return;
+            const acc = e.accelerationIncludingGravity;
+            if (!acc || acc.x === null) return;
+            const svm = Math.sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z) - 9.80665;
+            const now = Date.now();
+            if (svm > 2.4 && (now - APP.lastStepTimestamp > 280)) {
+                APP.lastStepTimestamp = now;
+                APP.totalSteps++;
+                APP.stepCounterTemp++;
+                dom.metricSteps.innerText = APP.totalSteps;
+            }
+        }
+
+        function startTrackingLoop() {
+            APP.startTime = Date.now();
+            APP.isTracking = true;
+            APP.recordedPath = [];
+            dom.btnWorkoutText.innerText = '結束並計算卡路里';
+            dom.btnToggleWorkout.classList.replace('from-emerald-500', 'from-rose-500');
+            dom.btnToggleWorkout.classList.replace('to-teal-500', 'to-red-600');
+            dom.sportStatusBadge.innerText = '追蹤中';
+            dom.sportStatusBadge.className = 'text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-mono';
+
+            if ('wakeLock' in navigator) {
+                navigator.wakeLock.request('screen').then(lock => APP.wakeLock = lock).catch(() => {});
+            }
+
+            if (navigator.geolocation) {
+                APP.gpsWatchId = navigator.geolocation.watchPosition(
+                    handleGpsPosition,
+                    err => {},
+                    { enableHighAccuracy: true, maximumAge: 2000, timeout: 5000 }
+                );
+            }
+
+            APP.timerInterval = setInterval(() => {
+                APP.elapsedSeconds++;
+                updateTimerDisplay();
+                evaluateSensorsAndCalories();
+            }, 1000);
+        }
+
+        function stopTrackingLoop() {
+            APP.isTracking = false;
+            clearInterval(APP.timerInterval);
+            if (APP.gpsWatchId !== null) { navigator.geolocation.clearWatch(APP.gpsWatchId); APP.gpsWatchId = null; }
+            if (APP.wakeLock) { APP.wakeLock.release().catch(() => {}); APP.wakeLock = null; }
+
+            dom.btnWorkoutText.innerText = '開始運動追蹤';
+            dom.btnToggleWorkout.classList.replace('from-rose-500', 'from-emerald-500');
+            dom.btnToggleWorkout.classList.replace('to-red-600', 'to-teal-500');
+            dom.sportStatusBadge.innerText = '已完成';
+            dom.sportStatusBadge.className = 'text-[10px] text-slate-400 bg-slate-700/50 px-1.5 py-0.5 rounded';
+
+            generateSessionMetrics();
+            showWorkoutResultModal();
+        }
+
+        function handleGpsPosition(pos) {
+            if (!APP.isTracking) return;
+            const { latitude, longitude, accuracy, speed } = pos.coords;
+            dom.gpsAccText.innerText = `精度 ±${Math.round(accuracy)}m`;
+            if (accuracy > 30) return;
+
+            const now = Date.now();
+            userMarker.setLatLng([latitude, longitude]);
+
+            if (APP.lastCoord) {
+                const dist = calculateDistanceMeters(APP.lastCoord.lat, APP.lastCoord.lng, latitude, longitude);
+                const timeDiffSec = Math.max(0.5, (now - APP.lastCoord.timestamp) / 1000);
+
+                if (dist > 3.5) {
+                    const calcSpeedKmh = (dist / timeDiffSec) * 3.6;
+                    APP.currentSpeedKmh = (speed !== null && speed >= 0) ? (speed * 3.6) : calcSpeedKmh;
+                    APP.totalDistanceMeters += dist;
+                    APP.recordedPath.push({ lat: latitude, lng: longitude, speed: APP.currentSpeedKmh, timestamp: now });
+                    actualTrackPolyline.addLatLng([latitude, longitude]);
+                    
+                    dom.metricDistance.innerText = (APP.totalDistanceMeters / 1000).toFixed(2);
+                    dom.metricSpeed.innerText = APP.currentSpeedKmh.toFixed(1);
+                    APP.lastCoord = { lat: latitude, lng: longitude, timestamp: now };
+                }
+            } else {
+                APP.lastCoord = { lat: latitude, lng: longitude, timestamp: now };
+                APP.recordedPath.push({ lat: latitude, lng: longitude, speed: 0, timestamp: now });
+                actualTrackPolyline.addLatLng([latitude, longitude]);
+            }
+        }
+
+        function evaluateSensorsAndCalories() {
+            APP.currentCadenceSPM = APP.stepCounterTemp * 60;
+            APP.stepCounterTemp = 0;
+            dom.metricCadence.innerText = APP.currentCadenceSPM;
+
+            const v = APP.currentSpeedKmh;
+            const spm = APP.currentCadenceSPM;
+
+            if (v > 16.0 && spm < 45) {
+                APP.isTransitFraud = true;
+                dom.transitWarning.classList.remove('hidden');
+                APP.currentMET = 0.0;
+                dom.sportModeName.innerText = '疑似搭車(暫停計算)';
+                dom.currentMetText.innerText = '0.0 MET';
+                return;
+            } else {
+                APP.isTransitFraud = false;
+                dom.transitWarning.classList.add('hidden');
+            }
+
+            let selectedMode = HPA_MET_TABLE.REST;
+            if (v < 1.0 && spm < 35) {
+                selectedMode = HPA_MET_TABLE.REST;
+            } else if (v >= 1.0 && v < 5.0) {
+                selectedMode = HPA_MET_TABLE.WALK_SLOW;
+            } else if ((v >= 5.0 && v < 7.2) || (spm > 105 && spm <= 135)) {
+                selectedMode = HPA_MET_TABLE.WALK_BRISK;
+            } else {
+                selectedMode = HPA_MET_TABLE.JOGGING;
+            }
+
+            APP.currentMET = selectedMode.met;
+            dom.sportModeName.innerText = selectedMode.name;
+            dom.currentMetText.innerText = `${selectedMode.met.toFixed(1)} MET`;
+
+            if (APP.currentMET > 0) {
+                const addedKcal = (APP.currentMET * APP.user.weight * (1 / 3600));
+                APP.totalCalories += addedKcal;
+                dom.metricCalories.innerText = APP.totalCalories.toFixed(1);
+            }
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(APP.elapsedSeconds / 60).toString().padStart(2, '0');
+            const s = (APP.elapsedSeconds % 60).toString().padStart(2, '0');
+            dom.metricDuration.innerText = `${m}:${s}`;
+        }
+
+        // 計算 8 項詳細運動數據
+        function generateSessionMetrics() {
+            const distKm = APP.totalDistanceMeters / 1000;
+            const durationHrs = APP.elapsedSeconds > 0 ? (APP.elapsedSeconds / 3600) : 0.0001;
+            const avgSpeedKmh = distKm / durationHrs;
+            const validPoints = APP.recordedPath.length;
+            
+            // 計算段數 (每超過一定距離或時間算一段，若無路徑點則至少1段)
+            const segments = Math.max(1, Math.floor(validPoints / 5));
+
+            // 起點到終點直線距離
+            let straightDistKm = 0;
+            if (APP.recordedPath.length >= 2) {
+                const start = APP.recordedPath[0];
+                const end = APP.recordedPath[APP.recordedPath.length - 1];
+                straightDistKm = calculateDistanceMeters(start.lat, start.lng, end.lat, end.lng) / 1000;
+            }
+
+            // 最快相鄰點速度
+            let maxSpeed = 0;
+            for (const p of APP.recordedPath) {
+                if (p.speed > maxSpeed) maxSpeed = p.speed;
+            }
+
+            const m = Math.floor(APP.elapsedSeconds / 60).toString().padStart(2, '0');
+            const s = (APP.elapsedSeconds % 60).toString().padStart(2, '0');
+            const timeStr = `${m}:${s}`;
+
+            APP.currentSessionMetrics = {
+                id: 'REC_' + Date.now(),
+                dateStr: new Date().toLocaleString('zh-TW', { hour12: false }),
+                totalDistance: distKm.toFixed(2), // km
+                durationTime: timeStr,
+                avgSpeed: avgSpeedKmh.toFixed(1), // km/h
+                calories: APP.totalCalories.toFixed(1), // kcal
+                validPoints: validPoints,
+                segments: segments,
+                straightDistance: straightDistKm.toFixed(2), // km
+                maxInstantSpeed: maxSpeed.toFixed(1) // km/h
+            };
+        }
+
+        function showWorkoutResultModal() {
+            const kcal = APP.totalCalories;
+            dom.resCalories.innerText = kcal.toFixed(1);
+            dom.resDistance.innerText = (APP.totalDistanceMeters / 1000).toFixed(2);
+            
+            const m = Math.floor(APP.elapsedSeconds / 60).toString().padStart(2, '0');
+            const s = (APP.elapsedSeconds % 60).toString().padStart(2, '0');
+            dom.resDuration.innerText = `${m}:${s}`;
+
+            // 食物換算：一碗白飯約 160-200 卡 (以 180 卡為基準進行換算)
+            const riceBowls = (kcal / 180).toFixed(1);
+
+            let mainMsg = `你消耗了 <span class="text-amber-400 font-black text-xl">${riceBowls}</span> 碗白飯的卡路里！繼續加油！`;
+            if (kcal < 5) {
+                mainMsg = `本次運動時間較短，消耗了少量卡路里，再多動一下就能多燒掉一碗白飯喔！`;
+            }
+
+            dom.foodEquivalentText.innerHTML = mainMsg;
+            dom.foodEquivalentSub.innerHTML = `(資訊對照：1碗白飯卡路里約為 160-200 卡，您本次燃燒 ${kcal.toFixed(1)} 卡)`;
+
+            dom.resultModal.classList.remove('hidden');
+        }
+
+        function populateDetailModal(metrics) {
+            dom.detailDist.innerText = metrics.totalDistance + ' km';
+            dom.detailTime.innerText = metrics.durationTime;
+            dom.detailAvgSpeed.innerText = metrics.avgSpeed + ' km/h';
+            dom.detailCals.innerText = metrics.calories + ' kcal';
+            dom.detailPoints.innerText = metrics.validPoints + ' 點';
+            dom.detailSegments.innerText = metrics.segments + ' 段';
+            dom.detailStraight.innerText = metrics.straightDistance + ' km';
+            dom.detailMaxSpeed.innerText = metrics.maxInstantSpeed + ' km/h';
+        }
+
+        function renderHistoryList() {
+            dom.historyListContainer.innerHTML = '';
+            if (APP.history.length === 0) {
+                dom.historyListContainer.innerHTML = `
+                    <div class="text-center py-12 text-slate-500 bg-slate-800/40 rounded-2xl border border-slate-800">
+                        <i class="fa-solid fa-folder-open text-3xl mb-2 text-slate-600"></i>
+                        <p class="text-xs">尚無任何運動紀錄，快去開始第一次運動吧！</p>
+                    </div>
+                `;
+                return;
+            }
+
+            APP.history.forEach((rec, idx) => {
+                const riceBowls = (parseFloat(rec.calories) / 180).toFixed(1);
+                const card = document.createElement('div');
+                card.className = "bg-slate-800/90 border border-slate-700/80 rounded-2xl p-4 shadow-md flex flex-col gap-3";
+                card.innerHTML = `
+                    <div class="flex justify-between items-center border-b border-slate-700/60 pb-2">
+                        <span class="text-xs font-mono text-emerald-400"><i class="fa-solid fa-calendar-days mr-1"></i>${rec.dateStr}</span>
+                        <span class="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded">紀錄 #${APP.history.length - idx}</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                            <div class="text-[10px] text-slate-400">消耗熱量</div>
+                            <div class="digital-font text-base font-bold text-amber-400">${rec.calories} <span class="text-[10px]">kcal</span></div>
+                        </div>
+                        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                            <div class="text-[10px] text-slate-400">總距離</div>
+                            <div class="digital-font text-base font-bold text-cyan-300">${rec.totalDistance} <span class="text-[10px]">km</span></div>
+                        </div>
+                        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                            <div class="text-[10px] text-slate-400">運動時間</div>
+                            <div class="digital-font text-base font-bold text-emerald-400">${rec.durationTime}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                        <div class="text-[11px] text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-bowl-rice text-amber-400"></i>
+                            <span>相當於消耗 <b>${riceBowls}</b> 碗白飯 (160-200卡/碗)</span>
+                        </div>
+                        <button class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 history-detail-btn" data-id="${rec.id}">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>詳細數據</span>
+                        </button>
+                    </div>
+                `;
+                dom.historyListContainer.appendChild(card);
+            });
+
+            // 綁定歷史卡片中的詳細數據按鈕
+            document.querySelectorAll('.history-detail-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const found = APP.history.find(h => h.id === id);
+                    if (found) {
+                        populateDetailModal(found);
+                        dom.detailModal.classList.remove('hidden');
+                    }
+                });
+            });
+        }
+
+        // 事件綁定
+        dom.btnToggleWorkout.addEventListener('click', async () => {
+            if (!APP.isTracking) { await requestMotionPermission(); startTrackingLoop(); }
+            else { stopTrackingLoop(); }
+        });
+
+        dom.btnResetWorkout.addEventListener('click', () => {
+            if (APP.isTracking) { APP.isTracking = false; clearInterval(APP.timerInterval); }
+            APP.totalCalories = 0.0; APP.totalDistanceMeters = 0.0; APP.totalSteps = 0; APP.currentSpeedKmh = 0.0; APP.currentCadenceSPM = 0; APP.elapsedSeconds = 0; APP.lastCoord = null; APP.recordedPath = [];
+            actualTrackPolyline.setLatLngs([]);
+            dom.metricCalories.innerText = '0.0'; dom.metricDistance.innerText = '0.00'; dom.metricSpeed.innerText = '0.0'; dom.metricCadence.innerText = '0'; dom.metricSteps.innerText = '0'; dom.metricDuration.innerText = '00:00';
+            dom.currentMetText.innerText = '0.0 MET'; dom.sportModeName.innerText = '靜止休息'; dom.sportStatusBadge.innerText = '未開始';
+            dom.btnWorkoutText.innerText = '開始運動追蹤'; dom.btnToggleWorkout.classList.replace('from-rose-500', 'from-emerald-500'); dom.btnToggleWorkout.classList.replace('to-red-600', 'to-teal-500');
+        });
+
+        dom.btnRecenter.addEventListener('click', () => { if (userMarker) map.setView(userMarker.getLatLng(), 16); });
+
+        dom.btnOpenUserModal.addEventListener('click', () => {
+            dom.inputWeight.value = APP.user.weight; dom.inputAge.value = APP.user.age;
+            dom.userModal.classList.remove('hidden');
+        });
+        dom.btnCloseUserModal.addEventListener('click', () => dom.userModal.classList.add('hidden'));
+
+        document.querySelectorAll('.gender-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.gender-btn').forEach(b => b.classList.replace('border-emerald-500', 'border-slate-700'));
+                btn.classList.replace('border-slate-700', 'border-emerald-500');
+                APP.user.gender = btn.dataset.gender;
+            });
+        });
+
+        dom.btnSaveUserModal.addEventListener('click', () => {
+            APP.user.weight = parseFloat(dom.inputWeight.value) || 60;
+            APP.user.age = parseInt(dom.inputAge.value) || 25;
+            dom.summaryUserInfo.innerText = `體重: ${APP.user.weight}kg | ${APP.user.age}歲`;
+            dom.userModal.classList.add('hidden');
+        });
+
+        dom.btnOpenDetailModal.addEventListener('click', () => {
+            if (APP.currentSessionMetrics) {
+                populateDetailModal(APP.currentSessionMetrics);
+                dom.detailModal.classList.remove('hidden');
+            }
+        });
+
+        dom.btnCloseResultModal.addEventListener('click', () => {
+            if (APP.currentSessionMetrics) {
+                APP.history.unshift(APP.currentSessionMetrics);
+                saveHistoryToStorage();
+            }
+            dom.resultModal.classList.add('hidden');
+        });
+
+        dom.btnCloseDetailModal.addEventListener('click', () => dom.detailModal.classList.add('hidden'));
+        dom.btnCloseDetailModal2.addEventListener('click', () => dom.detailModal.classList.add('hidden'));
+
+        dom.btnClearHistory.addEventListener('click', () => {
+            APP.history = [];
+            saveHistoryToStorage();
+            renderHistoryList();
+        });
+
+        window.onload = function() {
+            loadHistoryFromStorage();
+            initSidebar();
+            initMap();
+        };
+    </script>
+</body>
+</html>
