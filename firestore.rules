@@ -6,5 +6,25 @@ service cloud.firestore {
       allow read, write: if request.auth != null
         && request.auth.uid == userId;
     }
+
+    match /artifacts/{appId}/users/{userId}/profile/{profileId} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == userId;
+    }
+
+    match /artifacts/{appId}/publicProfiles/{userId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if request.auth != null
+        && request.auth.uid == userId;
+    }
+
+    match /artifacts/{appId}/friendships/{friendshipId} {
+      allow read: if request.auth != null
+        && request.auth.uid in resource.data.members;
+      allow create: if request.auth != null
+        && request.auth.uid in request.resource.data.members;
+      allow update, delete: if request.auth != null
+        && request.auth.uid in resource.data.members;
+    }
   }
 }

@@ -159,6 +159,14 @@
                     <i class="fa-solid fa-file-import text-amber-400 text-base w-5"></i>
                     <span>匯入檢視</span>
                 </button>
+                <button id="navTabAccount" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left">
+                    <i class="fa-solid fa-user text-emerald-400 text-base w-5"></i>
+                    <span>個人帳戶</span>
+                </button>
+                <button id="navTabFriends" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left">
+                    <i class="fa-solid fa-user-group text-sky-400 text-base w-5"></i>
+                    <span>好友列表</span>
+                </button>
             </nav>
         </div>
 
@@ -383,6 +391,45 @@
                 </div>
             </section>
         </div>
+
+        <!-- 視圖 4：個人帳戶 -->
+        <div id="viewAccount" class="hidden flex-1 flex flex-col gap-4">
+            <section class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700 shadow-md space-y-4">
+                <div class="flex items-center gap-3">
+                    <div id="accountAvatarPreview" class="w-14 h-14 rounded-full bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-300 text-xl font-bold overflow-hidden">YU</div>
+                    <div><h2 class="text-base font-bold text-white">個人帳戶</h2><p id="accountEmail" class="text-xs text-slate-400">請先登入 Google 帳號</p></div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label class="text-xs text-slate-400">暱稱<input id="accountNickname" type="text" maxlength="30" placeholder="輸入暱稱" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></label>
+                    <label class="text-xs text-slate-400">上傳頭貼（PNG、JPG，最大 5 MB）<input id="accountAvatarFile" type="file" accept="image/png,image/jpeg,image/webp" class="mt-1 block w-full text-xs text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-500 file:px-3 file:py-2 file:font-bold file:text-slate-950"></label>
+                    <label class="text-xs text-slate-400">頭貼網址（選填）<input id="accountAvatarUrl" type="url" placeholder="https://..." class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></label>
+                </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                    <div class="bg-slate-900/80 rounded-xl border border-slate-700 p-3"><span class="text-slate-400">好友代碼</span><strong id="accountFriendCode" class="block text-amber-300 mt-1 break-all">登入後產生</strong></div>
+                    <div class="bg-slate-900/80 rounded-xl border border-slate-700 p-3"><span class="text-slate-400">本月消耗</span><strong id="accountMonthlyCalories" class="block text-amber-300 mt-1">0 kcal</strong></div>
+                    <div class="bg-slate-900/80 rounded-xl border border-slate-700 p-3"><span class="text-slate-400">目前等級</span><strong id="accountLevel" class="block text-emerald-300 mt-1">Lv. 1</strong></div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-white">最近三個月</h3>
+                    <div id="accountMonthlyStats" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2"></div>
+                </div>
+                <div class="flex justify-end"><button id="btnSaveAccount" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold">儲存帳戶資料</button></div>
+                <p id="accountStatus" class="text-[11px] text-slate-400"></p>
+            </section>
+        </div>
+
+        <!-- 視圖 5：好友列表 -->
+        <div id="viewFriends" class="hidden flex-1 flex flex-col gap-4">
+            <section class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700 shadow-md space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div><h2 class="text-base font-bold text-white"><i class="fa-solid fa-user-group text-sky-400 mr-2"></i>好友列表</h2><p class="text-xs text-slate-400 mt-1">依選定月份累積消耗卡路里由高到低排列</p></div><div class="flex items-center gap-2"><select id="friendRankingMonth" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs"></select><button id="btnOpenAddFriend" class="px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold"><i class="fa-solid fa-user-plus mr-1"></i>添加好友</button></div></div>
+                <div id="addFriendPanel" class="hidden bg-slate-900/80 border border-sky-500/30 rounded-xl p-3 space-y-3">
+                    <label class="block text-xs text-slate-400">輸入好友代碼<input id="friendCodeInput" type="text" maxlength="40" placeholder="例如 YU-ABC12345" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white uppercase"></label>
+                    <div class="flex flex-col sm:flex-row gap-2"><div class="flex-1 text-xs text-slate-400 bg-slate-800 rounded-xl px-3 py-2">我的好友代碼：<strong id="myFriendCode" class="text-amber-300">請先登入</strong></div><button id="btnCopyFriendCode" class="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold">複製我的代碼</button><button id="btnAddFriend" class="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold">加入好友</button></div>
+                    <p id="friendActionStatus" class="text-[11px] text-slate-400"></p>
+                </div>
+            </section>
+            <section id="friendsListContainer" class="flex-1 space-y-2"><div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 text-xs text-slate-400">尚未登入或目前沒有好友。</div></section>
+        </div>
     </main>
 
     <!-- 體態設定 Modal -->
@@ -587,7 +634,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, getDoc, setDoc, query, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, getDoc, setDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         // 諾華健康諮詢中心 / 衛福部食品營養成分資料庫 (每100公克)
         const FOOD_DB = [
@@ -782,7 +830,9 @@
             
             history: [],
             currentSessionMetrics: null,
-            currentUser: null
+            currentUser: null,
+            accountProfile: { nickname: '', avatarUrl: '' },
+            friendRankingMonthKey: ''
         };
 
         const HPA_MET_TABLE = {
@@ -806,8 +856,12 @@
             viewWorkout: document.getElementById('viewWorkout'),
             viewHistory: document.getElementById('viewHistory'),
             viewImport: document.getElementById('viewImport'),
+            viewAccount: document.getElementById('viewAccount'),
+            viewFriends: document.getElementById('viewFriends'),
             historyListContainer: document.getElementById('historyListContainer'),
             navTabImport: document.getElementById('navTabImport'),
+            navTabAccount: document.getElementById('navTabAccount'),
+            navTabFriends: document.getElementById('navTabFriends'),
             trackImportInput: document.getElementById('trackImportInput'),
             trackImportStatus: document.getElementById('trackImportStatus'),
             importTrackPanel: document.getElementById('importTrackPanel'),
@@ -823,6 +877,26 @@
             importTrackMap: document.getElementById('importTrackMap'),
             copilotTrackPrompt: document.getElementById('copilotTrackPrompt'),
             btnCopyCopilotPrompt: document.getElementById('btnCopyCopilotPrompt'),
+            accountAvatarPreview: document.getElementById('accountAvatarPreview'),
+            accountEmail: document.getElementById('accountEmail'),
+            accountNickname: document.getElementById('accountNickname'),
+            accountAvatarFile: document.getElementById('accountAvatarFile'),
+            accountAvatarUrl: document.getElementById('accountAvatarUrl'),
+            accountFriendCode: document.getElementById('accountFriendCode'),
+            accountMonthlyCalories: document.getElementById('accountMonthlyCalories'),
+            accountLevel: document.getElementById('accountLevel'),
+            accountMonthlyStats: document.getElementById('accountMonthlyStats'),
+            btnSaveAccount: document.getElementById('btnSaveAccount'),
+            accountStatus: document.getElementById('accountStatus'),
+            btnOpenAddFriend: document.getElementById('btnOpenAddFriend'),
+            addFriendPanel: document.getElementById('addFriendPanel'),
+            friendCodeInput: document.getElementById('friendCodeInput'),
+            myFriendCode: document.getElementById('myFriendCode'),
+            btnCopyFriendCode: document.getElementById('btnCopyFriendCode'),
+            btnAddFriend: document.getElementById('btnAddFriend'),
+            friendActionStatus: document.getElementById('friendActionStatus'),
+            friendsListContainer: document.getElementById('friendsListContainer'),
+            friendRankingMonth: document.getElementById('friendRankingMonth'),
             btnClearHistory: document.getElementById('btnClearHistory'),
             btnGoogleAuth: document.getElementById('btnGoogleAuth'),
             authButtonText: document.getElementById('authButtonText'),
@@ -927,6 +1001,7 @@
         // Firebase 初始化與設定
         let db = null;
         let auth = null;
+        let storage = null;
         const appId = 'calories-gps';
         const firebaseConfig = {
             apiKey: 'AIzaSyBeB6se3NysEUVqCTqQkfAmDVVlcr0ngp4',
@@ -942,6 +1017,7 @@
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
+                storage = getStorage(app);
 
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
@@ -958,7 +1034,9 @@
                             dom.sidebarUserEmail.innerText = user.email || user.uid;
                         }
                         await loadUserProfile(user);
-                        loadHistoryFromCloud();
+                        await loadHistoryFromCloud();
+                        await syncPublicProfile();
+                        await loadFriendsFromCloud();
                     } else {
                         APP.currentUser = null;
                         loadUserProfile(null);
@@ -984,7 +1062,9 @@
                 dom.authButtonText.innerText = result.user.displayName || "已登入";
                 dom.sidebarUserEmail.innerText = result.user.email;
                 await loadUserProfile(result.user);
-                loadHistoryFromCloud();
+                await loadHistoryFromCloud();
+                await syncPublicProfile();
+                await loadFriendsFromCloud();
                 alertUserModalCustom(`歡迎回來，${result.user.displayName || 'Google 用戶'}！運動紀錄已同步至雲端。`);
             } catch (e) {
                 const errorCode = e?.code || 'unknown-error';
@@ -1016,6 +1096,7 @@
             } catch (e) {
                 console.warn("Cloud save error:", e);
             }
+            await syncPublicProfile();
         }
 
         function profileStorageKey(user) {
@@ -1029,6 +1110,8 @@
             APP.user.age = Number(profile.age) || 25;
             APP.user.gender = profile.gender === 'F' ? 'F' : 'M';
             APP.gpsAccuracyThresholdM = Number(profile.gpsAccuracyThresholdM) === 20 ? 20 : 35;
+            APP.accountProfile.nickname = profile.nickname || '';
+            APP.accountProfile.avatarUrl = profile.avatarUrl || '';
 
             dom.inputWeight.value = APP.user.weight;
             dom.inputHeight.value = APP.user.height;
@@ -1044,6 +1127,7 @@
                 btn.classList.toggle('text-slate-400', !selected);
             });
             dom.summaryUserInfo.innerText = `體重: ${APP.user.weight}kg | 身高: ${APP.user.height}cm | ${APP.user.age}歲`;
+            renderAccountSummary();
         }
 
         async function loadUserProfile(user) {
@@ -1078,6 +1162,8 @@
                 age: APP.user.age,
                 gender: APP.user.gender,
                 gpsAccuracyThresholdM: APP.gpsAccuracyThresholdM,
+                nickname: APP.accountProfile.nickname,
+                avatarUrl: APP.accountProfile.avatarUrl,
                 updatedAt: new Date().toISOString()
             };
             const storageKey = profileStorageKey(APP.currentUser);
@@ -1090,6 +1176,179 @@
             } catch (e) {
                 console.warn('Cloud profile save error:', e);
                 alertUserModalCustom('體態已儲存在本機，但雲端同步失敗，請稍後再試。');
+            }
+        }
+
+        function friendCodeForUser(user = auth?.currentUser) {
+            return user?.uid ? `YU-${user.uid.replace(/[^a-z0-9]/gi, '').slice(-10).toUpperCase()}` : '';
+        }
+
+        function currentMonthKey() {
+            return monthKeyOffset(0);
+        }
+
+        function monthKeyOffset(offset = 0) {
+            const date = new Date();
+            date.setDate(1);
+            date.setMonth(date.getMonth() - Number(offset || 0));
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function monthLabel(monthKey) {
+            const [year, month] = String(monthKey).split('-');
+            return `${year}年${Number(month)}月`;
+        }
+
+        function recordMonthKey(record) {
+            const startedAt = record.trackFile?.workout?.startedAt || record.dateStr;
+            const date = new Date(startedAt);
+            return Number.isNaN(date.getTime()) ? '' : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function monthlyCaloriesForMonth(month = currentMonthKey()) {
+            return APP.history.reduce((total, record) => {
+                if (recordMonthKey(record) !== month) return total;
+                const summary = getTrackSummary(record);
+                return total + Number(summary.estimatedCalories ?? summary.calories ?? 0);
+            }, 0);
+        }
+
+        function monthlyCalories() {
+            return monthlyCaloriesForMonth(currentMonthKey());
+        }
+
+        function recentMonthlyStats() {
+            return [0, 1, 2].map(offset => {
+                const month = monthKeyOffset(offset);
+                return { month, calories: Number(monthlyCaloriesForMonth(month).toFixed(2)) };
+            });
+        }
+
+        function levelFromCalories(calories) {
+            return Math.floor(Math.max(0, Number(calories) || 0) / 500) + 1;
+        }
+
+        function renderAccountSummary(publicProfile = null) {
+            const user = auth?.currentUser;
+            const calories = Number(publicProfile?.monthlyCalories ?? monthlyCalories());
+            const level = Number(publicProfile?.level ?? levelFromCalories(calories));
+            const nickname = APP.accountProfile.nickname || user?.displayName || '未設定暱稱';
+            const avatarUrl = APP.accountProfile.avatarUrl || user?.photoURL || '';
+            if (dom.accountEmail) dom.accountEmail.innerText = user?.email || '請先登入 Google 帳號';
+            if (dom.accountFriendCode) dom.accountFriendCode.innerText = friendCodeForUser(user) || '登入後產生';
+            if (dom.myFriendCode) dom.myFriendCode.innerText = friendCodeForUser(user) || '請先登入';
+            if (dom.accountMonthlyCalories) dom.accountMonthlyCalories.innerText = `${calories.toFixed(1)} kcal`;
+            if (dom.accountLevel) dom.accountLevel.innerText = `Lv. ${level}`;
+            if (dom.accountMonthlyStats) {
+                dom.accountMonthlyStats.innerHTML = recentMonthlyStats().map(stat => `
+                    <div class="bg-slate-900/80 rounded-xl border border-slate-700 p-3">
+                        <span class="text-slate-400">${monthLabel(stat.month)}</span>
+                        <strong class="block text-amber-300 mt-1">${stat.calories.toFixed(1)} kcal</strong>
+                        <span class="text-emerald-300 text-[11px]">Lv. ${levelFromCalories(stat.calories)}</span>
+                    </div>`).join('');
+            }
+            if (dom.accountNickname && document.activeElement !== dom.accountNickname) dom.accountNickname.value = nickname === '未設定暱稱' ? '' : nickname;
+            if (dom.accountAvatarUrl && document.activeElement !== dom.accountAvatarUrl) dom.accountAvatarUrl.value = APP.accountProfile.avatarUrl;
+            if (dom.accountAvatarPreview) {
+                dom.accountAvatarPreview.innerHTML = avatarUrl ? `<img src="${avatarUrl.replace(/"/g, '&quot;')}" alt="頭貼" class="w-full h-full object-cover">` : nickname.slice(0, 2).toUpperCase();
+            }
+        }
+
+        async function syncPublicProfile() {
+            const user = auth?.currentUser;
+            if (!db || !user || user.isAnonymous) {
+                renderAccountSummary();
+                return;
+            }
+            const calories = Number(monthlyCalories().toFixed(2));
+            const monthlyStats = Object.fromEntries(recentMonthlyStats().map(stat => [stat.month, stat.calories]));
+            const publicProfile = {
+                uid: user.uid,
+                friendCode: friendCodeForUser(user),
+                nickname: APP.accountProfile.nickname || user.displayName || '未設定暱稱',
+                avatarUrl: APP.accountProfile.avatarUrl || user.photoURL || '',
+                monthlyCalories: calories,
+                level: levelFromCalories(calories),
+                monthlyStats,
+                updatedAt: new Date().toISOString()
+            };
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'publicProfiles', user.uid), publicProfile, { merge: true });
+            } catch (e) {
+                console.warn('Public profile sync error:', e);
+            }
+            renderAccountSummary(publicProfile);
+        }
+
+        async function uploadAccountAvatar() {
+            const file = dom.accountAvatarFile.files?.[0];
+            const user = auth?.currentUser;
+            if (!file) return '';
+            if (!user || user.isAnonymous || !storage) throw new Error('請先登入 Google 帳號');
+            if (!file.type.startsWith('image/')) throw new Error('頭貼必須是圖片檔');
+            if (file.size > 5 * 1024 * 1024) throw new Error('頭貼檔案不可超過 5 MB');
+            const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+            const avatarRef = ref(storage, `avatars/${user.uid}/profile-${Date.now()}.${extension}`);
+            const uploaded = await uploadBytes(avatarRef, file, { contentType: file.type });
+            return getDownloadURL(uploaded.ref);
+        }
+
+        async function loadFriendsFromCloud() {
+            const user = auth?.currentUser;
+            if (!db || !user || user.isAnonymous) {
+                dom.friendsListContainer.innerHTML = '<div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 text-xs text-slate-400">請先登入 Google 帳號才能使用好友功能。</div>';
+                return;
+            }
+            try {
+                const selectedMonth = APP.friendRankingMonthKey || currentMonthKey();
+                if (dom.friendRankingMonth && !dom.friendRankingMonth.options.length) {
+                    dom.friendRankingMonth.innerHTML = [0, 1, 2].map(offset => {
+                        const month = monthKeyOffset(offset);
+                        return `<option value="${month}">${monthLabel(month)}</option>`;
+                    }).join('');
+                }
+                if (dom.friendRankingMonth) dom.friendRankingMonth.value = selectedMonth;
+                const friendshipQuery = query(collection(db, 'artifacts', appId, 'friendships'), where('members', 'array-contains', user.uid));
+                const snapshot = await getDocs(friendshipQuery);
+                const friends = [];
+                for (const friendship of snapshot.docs) {
+                    const friendUid = (friendship.data().members || []).find(uid => uid !== user.uid);
+                    if (!friendUid) continue;
+                    const profileSnapshot = await getDoc(doc(db, 'artifacts', appId, 'publicProfiles', friendUid));
+                    if (profileSnapshot.exists()) friends.push({ id: friendUid, ...profileSnapshot.data() });
+                }
+                const caloriesForMonth = friend => Number(friend.monthlyStats?.[selectedMonth] ?? (selectedMonth === currentMonthKey() ? friend.monthlyCalories : 0));
+                friends.sort((a, b) => caloriesForMonth(b) - caloriesForMonth(a));
+                dom.friendsListContainer.innerHTML = friends.length ? friends.map((friend, index) => {
+                    const avatar = friend.avatarUrl ? `<img src="${String(friend.avatarUrl).replace(/"/g, '&quot;')}" alt="頭貼" class="w-full h-full object-cover">` : String(friend.nickname || '?').slice(0, 2).toUpperCase();
+                    const calories = caloriesForMonth(friend);
+                    return `<div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-3 flex items-center gap-3"><div class="w-11 h-11 rounded-full bg-sky-500/20 border border-sky-400/40 text-sky-300 flex items-center justify-center font-bold overflow-hidden">${avatar}</div><div class="flex-1 min-w-0"><div class="text-sm text-white font-bold truncate">${index + 1}. ${friend.nickname || '未設定暱稱'}</div><div class="text-[11px] text-slate-400">${friend.friendCode || ''}</div></div><div class="text-right"><div class="text-emerald-300 font-bold">Lv. ${levelFromCalories(calories)}</div><div class="text-[11px] text-amber-300">${calories.toFixed(1)} kcal</div></div></div>`;
+                }).join('') : '<div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 text-xs text-slate-400">目前沒有好友，按上方「添加好友」開始加入。</div>';
+            } catch (e) {
+                console.warn('Friend list load error:', e);
+                dom.friendsListContainer.innerHTML = '<div class="bg-slate-800/80 border border-rose-500/30 rounded-2xl p-4 text-xs text-rose-300">好友列表讀取失敗，請確認 Firebase 規則已更新。</div>';
+            }
+        }
+
+        async function addFriendByCode() {
+            const user = auth?.currentUser;
+            const code = dom.friendCodeInput.value.trim().toUpperCase();
+            if (!db || !user || user.isAnonymous) { dom.friendActionStatus.innerText = '請先登入 Google 帳號。'; return; }
+            if (!code) { dom.friendActionStatus.innerText = '請輸入好友代碼。'; return; }
+            try {
+                const result = await getDocs(query(collection(db, 'artifacts', appId, 'publicProfiles'), where('friendCode', '==', code)));
+                if (result.empty) { dom.friendActionStatus.innerText = '找不到這個好友代碼。'; return; }
+                const friend = result.docs[0].data();
+                if (friend.uid === user.uid) { dom.friendActionStatus.innerText = '不能加入自己的好友代碼。'; return; }
+                const members = [user.uid, friend.uid].sort();
+                const friendshipId = members.join('_');
+                await setDoc(doc(db, 'artifacts', appId, 'friendships', friendshipId), { members, createdAt: new Date().toISOString() }, { merge: true });
+                dom.friendCodeInput.value = '';
+                dom.friendActionStatus.innerText = `已加入 ${friend.nickname || '這位使用者'}，好友列表已更新。`;
+                await loadFriendsFromCloud();
+            } catch (e) {
+                console.warn('Add friend error:', e);
+                dom.friendActionStatus.innerText = '加入好友失敗，請確認 Firebase 規則或稍後再試。';
             }
         }
 
@@ -1188,6 +1447,8 @@
                 dom.viewWorkout.classList.remove('hidden');
                 dom.viewHistory.classList.add('hidden');
                 dom.viewImport.classList.add('hidden');
+                dom.viewAccount.classList.add('hidden');
+                dom.viewFriends.classList.add('hidden');
                 dom.navTabWorkout.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-semibold text-xs transition text-left";
                 dom.navTabHistory.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
                 dom.navTabImport.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
@@ -1200,6 +1461,8 @@
                 dom.viewWorkout.classList.add('hidden');
                 dom.viewHistory.classList.remove('hidden');
                 dom.viewImport.classList.add('hidden');
+                dom.viewAccount.classList.add('hidden');
+                dom.viewFriends.classList.add('hidden');
                 dom.navTabHistory.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 font-semibold text-xs transition text-left";
                 dom.navTabWorkout.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
                 dom.navTabImport.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
@@ -1212,11 +1475,45 @@
                 dom.viewWorkout.classList.add('hidden');
                 dom.viewHistory.classList.add('hidden');
                 dom.viewImport.classList.remove('hidden');
+                dom.viewAccount.classList.add('hidden');
+                dom.viewFriends.classList.add('hidden');
                 dom.navTabImport.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 font-semibold text-xs transition text-left";
                 dom.navTabWorkout.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
                 dom.navTabHistory.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
                 dom.appHeaderTitle.innerText = "匯入檢視與軌跡分析";
                 if (importTrackMapInstance) setTimeout(() => importTrackMapInstance.invalidateSize(), 50);
+            });
+
+            dom.navTabAccount.addEventListener('click', () => {
+                toggleSidebar(false);
+                dom.viewWorkout.classList.add('hidden');
+                dom.viewHistory.classList.add('hidden');
+                dom.viewImport.classList.add('hidden');
+                dom.viewAccount.classList.remove('hidden');
+                dom.viewFriends.classList.add('hidden');
+                dom.navTabAccount.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-semibold text-xs transition text-left";
+                dom.navTabWorkout.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
+                dom.navTabHistory.className = dom.navTabWorkout.className;
+                dom.navTabImport.className = dom.navTabWorkout.className;
+                dom.navTabFriends.className = dom.navTabWorkout.className;
+                dom.appHeaderTitle.innerText = "個人帳戶";
+                renderAccountSummary();
+            });
+
+            dom.navTabFriends.addEventListener('click', async () => {
+                toggleSidebar(false);
+                dom.viewWorkout.classList.add('hidden');
+                dom.viewHistory.classList.add('hidden');
+                dom.viewImport.classList.add('hidden');
+                dom.viewAccount.classList.add('hidden');
+                dom.viewFriends.classList.remove('hidden');
+                dom.navTabFriends.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-sky-500/15 border border-sky-500/40 text-sky-300 font-semibold text-xs transition text-left";
+                dom.navTabWorkout.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
+                dom.navTabHistory.className = dom.navTabWorkout.className;
+                dom.navTabImport.className = dom.navTabWorkout.className;
+                dom.navTabAccount.className = dom.navTabWorkout.className;
+                dom.appHeaderTitle.innerText = "好友列表";
+                await loadFriendsFromCloud();
             });
         }
 
@@ -2326,6 +2623,65 @@
             dom.summaryUserInfo.innerText = `體重: ${APP.user.weight}kg | 身高: ${APP.user.height}cm | ${APP.user.age}歲`;
             await saveUserProfile();
             dom.userModal.classList.add('hidden');
+        });
+
+        dom.btnSaveAccount.addEventListener('click', async () => {
+            if (!auth?.currentUser || auth.currentUser.isAnonymous) {
+                dom.accountStatus.innerText = '請先登入 Google 帳號，才能保存個人帳戶資料。';
+                return;
+            }
+            APP.accountProfile.nickname = dom.accountNickname.value.trim().slice(0, 30);
+            dom.btnSaveAccount.disabled = true;
+            try {
+                const uploadedUrl = await uploadAccountAvatar();
+                APP.accountProfile.avatarUrl = uploadedUrl || dom.accountAvatarUrl.value.trim();
+                if (uploadedUrl) dom.accountAvatarUrl.value = uploadedUrl;
+                await saveUserProfile();
+                await syncPublicProfile();
+                dom.accountStatus.innerText = '個人帳戶資料與頭貼已保存。';
+            } catch (error) {
+                dom.accountStatus.innerText = error.message || '頭貼上傳失敗，請稍後再試。';
+            } finally {
+                dom.btnSaveAccount.disabled = false;
+            }
+        });
+
+        dom.accountAvatarFile.addEventListener('change', () => {
+            const file = dom.accountAvatarFile.files?.[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+                dom.accountStatus.innerText = '請選擇 5 MB 以下的圖片檔。';
+                dom.accountAvatarFile.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = () => {
+                dom.accountAvatarPreview.innerHTML = `<img src="${String(reader.result).replace(/"/g, '&quot;')}" alt="頭貼預覽" class="w-full h-full object-cover">`;
+                dom.accountStatus.innerText = '頭貼已選取，按「儲存帳戶資料」後上傳。';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        dom.btnOpenAddFriend.addEventListener('click', () => {
+            dom.addFriendPanel.classList.toggle('hidden');
+            renderAccountSummary();
+        });
+
+        dom.btnCopyFriendCode.addEventListener('click', async () => {
+            const code = friendCodeForUser();
+            if (!code) { dom.friendActionStatus.innerText = '請先登入 Google 帳號。'; return; }
+            try {
+                await navigator.clipboard.writeText(code);
+                dom.friendActionStatus.innerText = '我的好友代碼已複製。';
+            } catch (e) {
+                dom.friendActionStatus.innerText = `請手動複製：${code}`;
+            }
+        });
+
+        dom.btnAddFriend.addEventListener('click', addFriendByCode);
+        dom.friendRankingMonth.addEventListener('change', async () => {
+            APP.friendRankingMonthKey = dom.friendRankingMonth.value || currentMonthKey();
+            await loadFriendsFromCloud();
         });
 
         dom.btnOpenDetailModal.addEventListener('click', () => {
