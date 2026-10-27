@@ -90,12 +90,9 @@
         .forest-sprite {
             display: inline-block;
             flex: 0 0 auto;
-            background-repeat: no-repeat;
-            background-size: 300% 500%;
-            background-color: rgba(226, 232, 240, .82);
-            border-radius: 0.75rem;
-            border: 1px solid rgba(190, 242, 100, .28);
-            box-shadow: 0 4px 12px rgba(2, 6, 23, .25);
+            object-fit: contain;
+            filter: drop-shadow(0 4px 8px rgba(2, 6, 23, .4));
+            touch-action: manipulation;
         }
     </style>
 </head>
@@ -464,8 +461,8 @@
         </div>
     </main>
 
-    <div id="forestExchangeModal" class="hidden fixed inset-0 z-[1200] bg-slate-950/80 backdrop-blur-sm items-center justify-center p-4">
-        <div class="w-full max-w-lg bg-slate-900 border border-lime-500/40 rounded-2xl p-5 shadow-2xl space-y-4">
+    <div id="forestExchangeModal" class="hidden fixed inset-0 z-[1200] bg-slate-950/80 backdrop-blur-sm items-center justify-center p-4 overflow-y-auto touch-pan-y">
+        <div class="w-full max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain bg-slate-900 border border-lime-500/40 rounded-2xl p-5 shadow-2xl space-y-4">
             <div class="flex items-center justify-between"><h3 class="text-base font-bold text-white"><i class="fa-solid fa-leaf text-lime-300 mr-2"></i>對換植物</h3><button id="btnCloseForestExchange" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button></div>
             <p class="text-xs text-slate-400">1 大卡 = 1 顆星星。幼苗每次 30 顆星星換 8 株；花朵或大樹每次 100 顆星星換 3 株。</p>
             <label class="block text-xs text-slate-400">選擇土地<select id="forestExchangeLand" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white"></select></label>
@@ -1415,18 +1412,18 @@
             { name: '永恆森林', image: 'assets/forest/forest-path.jpg', position: 'center top' }
         ];
         const FOREST_PLANTS = {
-            sproutA: { name: '嫩葉芽', cost: 30, group: '30', sprite: 'plant', position: '0% 0%' },
-            sproutB: { name: '圓葉芽', cost: 30, group: '30', sprite: 'plant', position: '50% 0%' },
-            sproutC: { name: '青草芽', cost: 30, group: '30', sprite: 'plant', position: '100% 0%' },
-            flowerA: { name: '晨光小花', cost: 100, group: '100', sprite: 'plant', position: '0% 22%' },
-            flowerB: { name: '彩瓣花叢', cost: 100, group: '100', sprite: 'plant', position: '50% 22%' },
-            flowerC: { name: '星點花球', cost: 100, group: '100', sprite: 'plant', position: '100% 22%' },
-            treeA: { name: '細葉小樹', cost: 200, group: '200', sprite: 'tree', position: '0% 0%' },
-            treeB: { name: '圓冠大樹', cost: 200, group: '200', sprite: 'tree', position: '50% 45%' },
-            treeC: { name: '高聳森林樹', cost: 200, group: '200', sprite: 'tree', position: '100% 75%' },
-            seedling: { name: '小幼苗', cost: 30, group: '30', sprite: 'plant', position: '0% 0%' },
-            flower: { name: '花朵', cost: 100, group: '100', sprite: 'plant', position: '50% 22%' },
-            tree: { name: '大樹', cost: 200, group: '200', sprite: 'tree', position: '50% 45%' }
+            sproutA: { name: '嫩葉芽', cost: 30, group: '30', image: 'assets/forest/plants/sprout-a.png' },
+            sproutB: { name: '圓葉芽', cost: 30, group: '30', image: 'assets/forest/plants/sprout-b.png' },
+            sproutC: { name: '青草芽', cost: 30, group: '30', image: 'assets/forest/plants/sprout-c.png' },
+            flowerA: { name: '晨光小花', cost: 100, group: '100', image: 'assets/forest/plants/flower-a.png' },
+            flowerB: { name: '彩瓣花叢', cost: 100, group: '100', image: 'assets/forest/plants/flower-b.png' },
+            flowerC: { name: '星點花球', cost: 100, group: '100', image: 'assets/forest/plants/flower-c.png' },
+            treeA: { name: '細葉小樹', cost: 200, group: '200', image: 'assets/forest/plants/tree-a.png' },
+            treeB: { name: '圓冠大樹', cost: 200, group: '200', image: 'assets/forest/plants/tree-b.png' },
+            treeC: { name: '高聳森林樹', cost: 200, group: '200', image: 'assets/forest/plants/tree-c.png' },
+            seedling: { name: '小幼苗', cost: 30, group: '30', image: 'assets/forest/plants/sprout-a.png' },
+            flower: { name: '花朵', cost: 100, group: '100', image: 'assets/forest/plants/flower-b.png' },
+            tree: { name: '大樹', cost: 200, group: '200', image: 'assets/forest/plants/tree-b.png' }
         };
         const FOREST_GROUPS = {
             '30': { label: '30 星星區 · 幼苗與地被植物', color: 'emerald' },
@@ -1446,7 +1443,22 @@
         }
 
         function defaultForestData(members) {
-            return { members: [...members].sort(), unlockedLands: 1, plants: {}, updatedAt: new Date().toISOString() };
+            return { members: [...members].sort(), unlockedLands: 1, plants: {}, resetUsers: {}, updatedAt: new Date().toISOString() };
+        }
+
+        function clearUserPlantsFromForest(data, uid) {
+            const plants = data.plants || {};
+            Object.values(plants).forEach(land => Object.values(land || {}).forEach(counts => { if (counts && counts[uid] !== undefined) delete counts[uid]; }));
+            data.plants = plants;
+            let highest = 1;
+            FOREST_LANDS.forEach((_, index) => {
+                const total = Object.values(plants[index + 1] || {}).reduce((sum, counts) => sum + Object.values(counts || {}).reduce((subtotal, count) => subtotal + Number(count || 0), 0), 0);
+                if (total >= 20) highest = Math.min(FOREST_LANDS.length, index + 2);
+            });
+            data.unlockedLands = highest;
+            data.resetUsers ||= {};
+            data.resetUsers[uid] = true;
+            return data;
         }
 
         function plantColorFor(uid, type) {
@@ -1488,6 +1500,10 @@
             try {
                 const snapshot = await getDoc(forestRef);
                 APP.forestData = snapshot.exists() ? snapshot.data() : defaultForestData([user.uid, friendUid]);
+                if (!APP.forestData.resetUsers?.[user.uid]) {
+                    APP.forestData = clearUserPlantsFromForest(APP.forestData, user.uid);
+                    if (snapshot.exists()) await setDoc(forestRef, APP.forestData, { merge: true });
+                }
             } catch (error) {
                 console.warn('Forest load error:', error);
                 APP.forestData = defaultForestData([user.uid, friendUid]);
@@ -1526,21 +1542,23 @@
                 const plants = data?.plants?.[landNumber] || {};
                 const plantTotal = Object.values(plants).reduce((sum, counts) => sum + Object.values(counts || {}).reduce((subtotal, count) => subtotal + Number(count || 0), 0), 0);
                 const entries = Object.entries(FOREST_PLANTS).flatMap(([type, info]) => Object.entries(plants[type] || {}).map(([uid, count]) => ({ type, info, uid, count })));
-                const plantHtml = entries.length ? entries.map(item => `<div class="flex flex-col items-center" title="${item.info.name} ${item.count} 株">${forestSpriteHtml(item.type, item.info, 48)}<span class="text-[10px] text-slate-300">${item.count} 株</span></div>`).join('') : '<span class="text-xs text-slate-500">尚未種植</span>';
+                const plantHtml = entries.length ? entries.flatMap(item => Array.from({ length: Number(item.count || 0) }, (_, plantIndex) => `<div class="flex flex-col items-center justify-end" title="${item.info.name}" style="transform:translateY(${(plantIndex * 7 + item.uid.length) % 13 - 6}px) rotate(${(plantIndex * 11 + item.uid.length) % 17 - 8}deg)">${forestSpriteHtml(item.type, item.info, 54, item.uid)}</div>`)).join('') : '<span class="text-xs text-slate-500">尚未種植</span>';
                 const background = `linear-gradient(rgba(5, 15, 18, .48), rgba(5, 15, 18, .62)), url('${landInfo.image}')`;
                 return `<article class="${unlocked ? 'border-lime-500/40' : 'border-slate-700 opacity-70'} border rounded-2xl p-4 min-h-44 bg-cover bg-center overflow-hidden" style="background-image:${background};background-position:${landInfo.position}"><div class="flex items-center justify-between gap-2"><h3 class="text-sm font-bold ${unlocked ? 'text-lime-100' : 'text-slate-300'} drop-shadow">土地 ${landNumber} · ${landInfo.name}</h3><span class="text-[10px] ${unlocked ? 'text-emerald-200' : 'text-slate-300'} bg-slate-950/55 rounded-full px-2 py-1">${unlocked ? `${plantTotal} / 20 株` : '完成前一片土地後解鎖'}</span></div><div class="flex items-end gap-3 mt-4 min-h-16">${unlocked ? plantHtml : '<i class="fa-solid fa-lock text-slate-200/70 text-2xl"></i>'}</div></article>`;
             }).join('');
         }
 
-        function forestSpriteHtml(type, info, size = 62) {
-            const source = info.sprite === 'tree' ? 'assets/forest/tree-sprites.jpg' : 'assets/forest/plant-sprites.jpg';
-            return `<span class="forest-sprite" style="width:${size}px;height:${size}px;background-image:url('${source}');background-position:${info.position};" aria-label="${info.name}"></span>`;
+        function forestSpriteHtml(type, info, size = 62, uid = auth?.currentUser?.uid || 'guest') {
+            let hash = 0;
+            for (const char of `${uid}-${type}`) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+            const hue = (hash % 5) * 48 - 30;
+            return `<img src="${info.image}" width="${size}" height="${size}" class="forest-sprite" style="filter:hue-rotate(${hue}deg) saturate(1.15) drop-shadow(0 4px 8px rgba(2,6,23,.4));" alt="${info.name}" loading="lazy">`;
         }
 
         function renderForestPlantChoices() {
             dom.forestPlantChoices.innerHTML = Object.entries(FOREST_GROUPS).map(([group, groupInfo]) => {
                 const choices = Object.entries(FOREST_PLANTS).filter(([, info]) => info.group === group);
-                return `<section class="rounded-xl border border-slate-700 bg-slate-800/70 p-3"><h4 class="text-xs font-bold text-${groupInfo.color}-200 mb-2">${groupInfo.label}</h4><div class="grid grid-cols-3 gap-2">${choices.map(([type, info]) => `<button data-plant-type="${type}" class="forest-plant-choice bg-slate-900/80 border border-slate-700 hover:border-lime-400 rounded-xl p-2 text-center"><div class="flex justify-center">${forestSpriteHtml(type, info)}</div><span class="text-[11px] text-white block">${info.name}</span><small class="block text-[10px] text-amber-300">${info.cost} 星 / 1 株</small></button>`).join('')}</div></section>`;
+                return `<section class="rounded-xl border border-slate-700 bg-slate-800/70 p-3"><h4 class="text-xs font-bold text-${groupInfo.color}-200 mb-2">${groupInfo.label}</h4><div class="grid grid-cols-3 gap-2">${choices.map(([type, info]) => `<button data-plant-type="${type}" class="forest-plant-choice bg-slate-900/80 border border-slate-700 hover:border-lime-400 rounded-xl p-2 text-center"><div class="flex justify-center">${forestSpriteHtml(type, info, 62, auth?.currentUser?.uid || 'guest')}</div><span class="text-[11px] text-white block">${info.name}</span><small class="block text-[10px] text-amber-300">${info.cost} 星 / 1 株</small></button>`).join('')}</div></section>`;
             }).join('');
             document.querySelectorAll('.forest-plant-choice').forEach(button => button.addEventListener('click', () => {
                 APP.forestSelectedPlant = button.dataset.plantType;
@@ -1559,8 +1577,14 @@
             const user = auth?.currentUser;
             APP.forestWallet = { spentStars: 0 };
             if (!db || !user || user.isAnonymous) return;
-            const snapshot = await getDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'forest', 'wallet'));
-            if (snapshot.exists()) APP.forestWallet = snapshot.data();
+            const walletRef = doc(db, 'artifacts', appId, 'users', user.uid, 'forest', 'wallet');
+            const snapshot = await getDoc(walletRef);
+            APP.forestWallet = snapshot.exists() ? snapshot.data() : { spentStars: 0 };
+            if (APP.forestWallet.resetVersion !== 2) {
+                APP.forestWallet.spentStars = 0;
+                APP.forestWallet.resetVersion = 2;
+                await setDoc(walletRef, APP.forestWallet, { merge: true });
+            }
         }
 
         async function exchangeForestPlant() {
@@ -1584,6 +1608,8 @@
             plants[land][type] ||= {};
             plants[land][type][user.uid] = Number(plants[land][type][user.uid] || 0) + quantity;
             APP.forestData.plants = plants;
+            APP.forestData.resetUsers ||= {};
+            APP.forestData.resetUsers[user.uid] = true;
             const landPlantTotal = Object.values(plants[land]).reduce((sum, counts) => sum + Object.values(counts || {}).reduce((subtotal, count) => subtotal + Number(count || 0), 0), 0);
             if (landPlantTotal >= 20 && land >= Number(APP.forestData.unlockedLands || 1)) APP.forestData.unlockedLands = Math.min(FOREST_LANDS.length, land + 1);
             APP.forestData.updatedAt = new Date().toISOString();
