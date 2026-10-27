@@ -1939,13 +1939,6 @@
                 });
             });
 
-            document.querySelectorAll('.history-delete-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    deleteHistoryRecord(e.currentTarget.dataset.id);
-                });
-            });
-
             document.querySelectorAll('.history-export-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -2020,6 +2013,13 @@
 
         dom.btnConfirmDelete.addEventListener('click', () => closeDeleteConfirmation(true));
         dom.btnCancelDelete.addEventListener('click', () => closeDeleteConfirmation(false));
+        dom.historyListContainer.addEventListener('click', (event) => {
+            const deleteButton = event.target.closest('.history-delete-btn');
+            if (!deleteButton) return;
+            event.preventDefault();
+            event.stopPropagation();
+            deleteHistoryRecord(deleteButton.dataset.id);
+        });
 
         dom.btnPlanShadeRoute.addEventListener('click', () => {
             planShadeRoute();
