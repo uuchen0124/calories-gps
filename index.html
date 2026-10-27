@@ -750,6 +750,8 @@
             timerInterval: null,
             
             totalCalories: 0.0,
+            totalMetSeconds: 0.0,
+            activeSeconds: 0.0,
             totalDistanceMeters: 0.0,
             totalSteps: 0,
             currentSpeedKmh: 0.0,
@@ -1589,6 +1591,8 @@
 
         function resetLiveWorkoutStats(clearMap = true) {
             APP.totalCalories = 0.0;
+            APP.totalMetSeconds = 0.0;
+            APP.activeSeconds = 0.0;
             APP.totalDistanceMeters = 0.0;
             APP.totalSteps = 0;
             APP.currentSpeedKmh = 0.0;
@@ -1776,6 +1780,8 @@
                 const now = performance.now();
                 const elapsedForCalories = APP.lastCalorieTimestamp ? Math.min(2, Math.max(0, (now - APP.lastCalorieTimestamp) / 1000)) : 1;
                 APP.lastCalorieTimestamp = now;
+                APP.totalMetSeconds += APP.currentMET * elapsedForCalories;
+                APP.activeSeconds += elapsedForCalories;
                 const addedKcal = APP.currentMET * APP.user.weight * (elapsedForCalories / 3600);
                 APP.totalCalories += addedKcal;
                 dom.metricCalories.innerText = APP.totalCalories.toFixed(1);
@@ -1849,7 +1855,9 @@
                     durationTime: timeStr,
                     calories: Number(APP.totalCalories.toFixed(2)),
                     estimatedCalories: Number(APP.totalCalories.toFixed(2)),
-                    calorieFormula: '每秒：MET × 體重(kg) × 經過秒數 ÷ 3600，累加為估算熱量',
+                    activeSeconds: Number(APP.activeSeconds.toFixed(2)),
+                    metSeconds: Number(APP.totalMetSeconds.toFixed(2)),
+                    calorieFormula: '累積 MET 秒數 × 體重(kg) ÷ 3600 = 估算熱量；MET−1 差額 = 體重 × 運動秒數 ÷ 3600',
                     averageSpeedKmh: Number(avgSpeedKmh.toFixed(2)),
                     maxSpeedKmh: Number(maxInstantSpeedKmh.toFixed(2)),
                     maxAdjacentSpeedKmh: Number(maxAdjacentSpeedKmh.toFixed(2)),
@@ -1912,9 +1920,13 @@
 
         function getTrackSummary(metrics) {
             if (metrics.trackFile?.summary) {
+                const trackSummary = metrics.trackFile.summary;
+                const calculatedAdjacentSpeed = trackSummary.maxAdjacentSpeedKmh ?? calculateMaxAdjacentSpeedKmh(metrics.trackFile.gpsPath || []);
                 return {
-                    ...metrics.trackFile.summary,
-                    segments: metrics.trackFile.summary.recordedPoints > 0 || metrics.trackFile.summary.distanceKm > 0 ? 1 : 0
+                    ...trackSummary,
+                    estimatedCalories: trackSummary.estimatedCalories ?? trackSummary.calories ?? 0,
+                    maxAdjacentSpeedKmh: Number(calculatedAdjacentSpeed || 0),
+                    segments: trackSummary.recordedPoints > 0 || trackSummary.distanceKm > 0 ? 1 : 0
                 };
             }
             return {
@@ -1943,7 +1955,10 @@
                 gpsPath: record.pathCoordinates || [],
                 samples: []
             };
-            const summary = trackFile.summary || {};
+            const summary = { ...getTrackSummary(record), ...(trackFile.summary || {}) };
+            summary.maxAdjacentSpeedKmh = Number(summary.maxAdjacentSpeedKmh ?? calculateMaxAdjacentSpeedKmh(trackFile.gpsPath || record.pathCoordinates || []));
+            summary.estimatedCalories = Number(summary.estimatedCalories ?? summary.calories ?? 0);
+            summary.segments = summary.recordedPoints > 0 || summary.distanceKm > 0 ? 1 : 0;
             const rows = [
                 ['運動摘要'],
                 ['項目', '數值', '單位'],
@@ -1956,6 +1971,8 @@
                 ['運動時間', summary.durationSeconds ?? '', '秒'],
                 ['運動時間格式', summary.durationTime ?? '', '分:秒'],
                 ['估算熱量', summary.estimatedCalories ?? summary.calories ?? '', 'kcal'],
+                ['累計運動秒數', summary.activeSeconds ?? '', '秒'],
+                ['累積 MET 秒數', summary.metSeconds ?? '', 'MET·秒'],
                 ['熱量算式', summary.calorieFormula ?? '', ''],
                 ['平均速度', summary.averageSpeedKmh ?? '', 'km/h'],
                 ['最高速度', summary.maxSpeedKmh ?? '', 'km/h'],
@@ -1989,7 +2006,10 @@
                 gpsPath: record.pathCoordinates || [],
                 samples: []
             };
-            const exportTrack = { ...trackFile };
+            const exportTrack = { ...trackFile, summary: { ...getTrackSummary(record), ...(trackFile.summary || {}) } };
+            exportTrack.summary.maxAdjacentSpeedKmh = Number(exportTrack.summary.maxAdjacentSpeedKmh ?? calculateMaxAdjacentSpeedKmh(exportTrack.gpsPath || record.pathCoordinates || []));
+            exportTrack.summary.estimatedCalories = Number(exportTrack.summary.estimatedCalories ?? exportTrack.summary.calories ?? 0);
+            exportTrack.summary.segments = exportTrack.summary.recordedPoints > 0 || exportTrack.summary.distanceKm > 0 ? 1 : 0;
             delete exportTrack.samples;
             exportTrack.exportNote = '任務 6 分析檔：包含運動摘要與 GPS 路徑，不包含逐秒取樣資料。';
             const json = JSON.stringify(exportTrack, null, 2);
