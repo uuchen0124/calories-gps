@@ -370,6 +370,7 @@
                         <div><div class="text-slate-400">終點</div><strong id="importEndPoint" class="text-sky-300">未記錄</strong></div>
                         <div><div class="text-slate-400">集合點</div><strong id="importMeetingPoint" class="text-orange-300">未記錄</strong></div>
                         <div><div class="text-slate-400">有效定位點</div><strong id="importPoints" class="text-emerald-300">0 點</strong></div>
+                        <div><div class="text-slate-400">定位門檻</div><strong id="importGpsThreshold" class="text-amber-300">未記錄</strong></div>
                     </div>
                     <p id="importCalorieFormula" class="text-[11px] text-slate-400 mt-3">熱量算式：尚未載入。</p>
                 </div>
@@ -408,6 +409,14 @@
                 <div>
                     <label class="block text-slate-400 mb-1">年齡 (歲)：</label>
                     <input id="inputAge" type="number" min="5" max="120" value="25" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">GPS 定位精度門檻（C 對照實驗）：</label>
+                    <select id="inputGpsAccuracyThreshold" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500">
+                        <option value="35">35 公尺（原始參數）</option>
+                        <option value="20">20 公尺（對照實驗）</option>
+                    </select>
+                    <small class="block text-[10px] text-slate-500 mt-1">只接受精度數值不超過此門檻的 GPS 點。</small>
                 </div>
                 <div>
                     <label class="block text-slate-400 mb-1">性別：</label>
@@ -744,6 +753,7 @@
 
         const APP = {
             user: { weight: 60, height: 170, age: 25, gender: 'M' },
+            gpsAccuracyThresholdM: 35,
             isTracking: false,
             startTime: null,
             elapsedSeconds: 0,
@@ -841,6 +851,8 @@
             inputWeight: document.getElementById('inputWeight'),
             inputHeight: document.getElementById('inputHeight'),
             inputAge: document.getElementById('inputAge'),
+            inputGpsAccuracyThreshold: document.getElementById('inputGpsAccuracyThreshold'),
+            importGpsThreshold: document.getElementById('importGpsThreshold'),
             summaryUserInfo: document.getElementById('summaryUserInfo'),
             
             resultModal: document.getElementById('resultModal'),
@@ -1016,10 +1028,12 @@
             APP.user.height = Number(profile.heightCm) || 170;
             APP.user.age = Number(profile.age) || 25;
             APP.user.gender = profile.gender === 'F' ? 'F' : 'M';
+            APP.gpsAccuracyThresholdM = Number(profile.gpsAccuracyThresholdM) === 20 ? 20 : 35;
 
             dom.inputWeight.value = APP.user.weight;
             dom.inputHeight.value = APP.user.height;
             dom.inputAge.value = APP.user.age;
+            dom.inputGpsAccuracyThreshold.value = APP.gpsAccuracyThresholdM;
             document.querySelectorAll('.gender-btn').forEach(btn => {
                 const selected = btn.dataset.gender === APP.user.gender;
                 btn.classList.toggle('border-emerald-500', selected);
@@ -1063,6 +1077,7 @@
                 heightCm: APP.user.height,
                 age: APP.user.age,
                 gender: APP.user.gender,
+                gpsAccuracyThresholdM: APP.gpsAccuracyThresholdM,
                 updatedAt: new Date().toISOString()
             };
             const storageKey = profileStorageKey(APP.currentUser);
@@ -1686,7 +1701,7 @@
             if (!APP.isTracking) return;
             const { latitude, longitude, accuracy, speed } = pos.coords;
             dom.gpsAccText.innerText = `精度 ±${Math.round(accuracy)}m`;
-            if (accuracy > 30) return;
+            if (accuracy > APP.gpsAccuracyThresholdM) return;
 
             const now = Date.now();
             userMarker.setLatLng([latitude, longitude]);
@@ -1865,6 +1880,7 @@
                     averageCadenceSPM: Number(averageCadence.toFixed(2)),
                     recordedPoints: validPoints,
                     segments,
+                    gpsAccuracyThresholdM: APP.gpsAccuracyThresholdM,
                     straightDistanceKm: Number(straightDistKm.toFixed(2))
                 },
                 meetingPoint: APP.meetingPoint || null,
@@ -1936,6 +1952,7 @@
                 recordedPoints: Number(metrics.validPoints || 0), segments: Number(metrics.segments || 0),
                 straightDistanceKm: Number(metrics.straightDistance || 0), maxSpeedKmh: Number(metrics.maxInstantSpeed || 0),
                 maxAdjacentSpeedKmh: Number(metrics.maxAdjacentSpeed || metrics.maxInstantSpeed || 0),
+                gpsAccuracyThresholdM: Number(metrics.gpsAccuracyThresholdM || 35),
                 steps: Number(metrics.steps || 0), averageCadenceSPM: Number(metrics.averageCadence || 0)
             };
         }
@@ -1980,6 +1997,7 @@
                 ['步數', summary.steps ?? '', '步'],
                 ['平均步頻', summary.averageCadenceSPM ?? '', 'SPM'],
                 ['有效定位點', summary.recordedPoints ?? '', '點'],
+                ['GPS 定位精度門檻', summary.gpsAccuracyThresholdM ?? '', 'm'],
                 ['運動段數', summary.segments ?? '', '段'],
                 ['起終點直線距離', summary.straightDistanceKm ?? '', 'km']
             ];
@@ -2055,6 +2073,7 @@
             dom.importEndPoint.innerText = formatImportedPoint(end);
             dom.importMeetingPoint.innerText = meetingPoint ? formatImportedPoint(meetingPoint) : '未記錄';
             dom.importPoints.innerText = `${summary.recordedPoints || path.length} 點`;
+            dom.importGpsThreshold.innerText = summary.gpsAccuracyThresholdM ? `${summary.gpsAccuracyThresholdM} m` : '未記錄';
             dom.importCalorieFormula.innerText = `熱量算式：${summary.calorieFormula || 'MET × 體重(kg) × 運動時間(小時) ÷ 200 × 3.5（依運動強度估算）'}`;
             dom.trackImportStatus.innerText = `已載入：${fileName}，請檢查地圖與摘要數據。`;
 
@@ -2277,6 +2296,7 @@
 
         dom.btnOpenUserModal.addEventListener('click', () => {
             dom.inputWeight.value = APP.user.weight; dom.inputHeight.value = APP.user.height; dom.inputAge.value = APP.user.age;
+            dom.inputGpsAccuracyThreshold.value = APP.gpsAccuracyThresholdM;
             document.querySelectorAll('.gender-btn').forEach(btn => {
                 const selected = btn.dataset.gender === APP.user.gender;
                 btn.classList.toggle('border-emerald-500', selected);
@@ -2302,6 +2322,7 @@
             APP.user.weight = parseFloat(dom.inputWeight.value) || 60;
             APP.user.height = parseFloat(dom.inputHeight.value) || 170;
             APP.user.age = parseInt(dom.inputAge.value) || 25;
+            APP.gpsAccuracyThresholdM = Number(dom.inputGpsAccuracyThreshold.value) === 20 ? 20 : 35;
             dom.summaryUserInfo.innerText = `體重: ${APP.user.weight}kg | 身高: ${APP.user.height}cm | ${APP.user.age}歲`;
             await saveUserProfile();
             dom.userModal.classList.add('hidden');
