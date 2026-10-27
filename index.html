@@ -155,6 +155,10 @@
                     <i class="fa-solid fa-clock-rotate-left text-cyan-400 text-base w-5"></i>
                     <span>運動紀錄 (雲端同步)</span>
                 </button>
+                <button id="navTabImport" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left">
+                    <i class="fa-solid fa-file-import text-amber-400 text-base w-5"></i>
+                    <span>匯入檢視</span>
+                </button>
             </nav>
         </div>
 
@@ -335,6 +339,48 @@
             <div id="historyListContainer" class="flex-1 space-y-3 overflow-y-auto max-h-[600px] pr-1">
                 <!-- 動態塞入紀錄卡片 -->
             </div>
+        </div>
+
+        <!-- 視圖 3：任務 6 軌跡匯入檢視 -->
+        <div id="viewImport" class="hidden flex-1 flex flex-col gap-4">
+            <section class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700 shadow-md space-y-3">
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-file-import text-amber-400"></i> 匯入檢視與軌跡分析
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">選擇運動紀錄匯出的 JSON 軌跡檔，檢查任務 6 所需數據。</p>
+                </div>
+                <label class="block text-xs text-slate-400">
+                    軌跡 JSON 檔案
+                    <input id="trackImportInput" type="file" accept=".json,.track.json,application/json" class="mt-1 block w-full text-xs text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-amber-500 file:px-3 file:py-2 file:font-bold file:text-slate-950 hover:file:bg-amber-400">
+                </label>
+                <p id="trackImportStatus" class="text-[11px] text-slate-400">尚未選擇軌跡檔。</p>
+            </section>
+
+            <section id="importTrackPanel" class="hidden space-y-3">
+                <div class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700 shadow-md">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                        <div><div class="text-slate-400">總距離</div><strong id="importDistance" class="text-cyan-300 text-lg">0.00 km</strong></div>
+                        <div><div class="text-slate-400">運動時間</div><strong id="importDuration" class="text-indigo-300 text-lg">00:00</strong></div>
+                        <div><div class="text-slate-400">平均速度</div><strong id="importAverageSpeed" class="text-white text-lg">0.0 km/h</strong></div>
+                        <div><div class="text-slate-400">估算熱量</div><strong id="importCalories" class="text-amber-300 text-lg">0.0 kcal</strong></div>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs mt-3 pt-3 border-t border-slate-700">
+                        <div><div class="text-slate-400">起點</div><strong id="importStartPoint" class="text-emerald-300">未記錄</strong></div>
+                        <div><div class="text-slate-400">終點</div><strong id="importEndPoint" class="text-sky-300">未記錄</strong></div>
+                        <div><div class="text-slate-400">集合點</div><strong id="importMeetingPoint" class="text-orange-300">未記錄</strong></div>
+                        <div><div class="text-slate-400">有效定位點</div><strong id="importPoints" class="text-emerald-300">0 點</strong></div>
+                    </div>
+                    <p id="importCalorieFormula" class="text-[11px] text-slate-400 mt-3">熱量算式：尚未載入。</p>
+                </div>
+                <div id="importTrackMap" class="w-full h-[420px] rounded-2xl overflow-hidden border border-slate-700 bg-slate-950"></div>
+                <div class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700 shadow-md space-y-2">
+                    <h3 class="text-sm font-bold text-white"><i class="fa-brands fa-github text-slate-300 mr-1"></i> Copilot 驗算</h3>
+                    <p class="text-xs text-slate-400">將 JSON 放在專案的 <code>my-tracks/</code> 資料夾，在 VS Code Copilot Chat 的 Agent 模式輸入：</p>
+                    <code id="copilotTrackPrompt" class="block rounded-xl bg-slate-950 border border-slate-700 p-3 text-xs text-amber-200 break-all">/analyze-track #file:my-tracks/你的檔名.json</code>
+                    <button id="btnCopyCopilotPrompt" class="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-700 text-sky-300 text-xs font-bold border border-slate-700">複製分析指令</button>
+                </div>
+            </section>
         </div>
     </main>
 
@@ -747,7 +793,24 @@
             navTabHistory: document.getElementById('navTabHistory'),
             viewWorkout: document.getElementById('viewWorkout'),
             viewHistory: document.getElementById('viewHistory'),
+            viewImport: document.getElementById('viewImport'),
             historyListContainer: document.getElementById('historyListContainer'),
+            navTabImport: document.getElementById('navTabImport'),
+            trackImportInput: document.getElementById('trackImportInput'),
+            trackImportStatus: document.getElementById('trackImportStatus'),
+            importTrackPanel: document.getElementById('importTrackPanel'),
+            importDistance: document.getElementById('importDistance'),
+            importDuration: document.getElementById('importDuration'),
+            importAverageSpeed: document.getElementById('importAverageSpeed'),
+            importCalories: document.getElementById('importCalories'),
+            importStartPoint: document.getElementById('importStartPoint'),
+            importEndPoint: document.getElementById('importEndPoint'),
+            importMeetingPoint: document.getElementById('importMeetingPoint'),
+            importPoints: document.getElementById('importPoints'),
+            importCalorieFormula: document.getElementById('importCalorieFormula'),
+            importTrackMap: document.getElementById('importTrackMap'),
+            copilotTrackPrompt: document.getElementById('copilotTrackPrompt'),
+            btnCopyCopilotPrompt: document.getElementById('btnCopyCopilotPrompt'),
             btnClearHistory: document.getElementById('btnClearHistory'),
             btnGoogleAuth: document.getElementById('btnGoogleAuth'),
             authButtonText: document.getElementById('authButtonText'),
@@ -839,6 +902,8 @@
         let actualTrackPolyline = null;
         let historyRouteMapInstance = null;
         let historyRoutePolyline = null;
+        let importTrackMapInstance = null;
+        let importTrackLayer = null;
         let plannedRouteLayer = null;
         let daylightCache = null;
         let pendingPlan = null;
@@ -1105,8 +1170,10 @@
                 toggleSidebar(false);
                 dom.viewWorkout.classList.remove('hidden');
                 dom.viewHistory.classList.add('hidden');
+                dom.viewImport.classList.add('hidden');
                 dom.navTabWorkout.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-semibold text-xs transition text-left";
                 dom.navTabHistory.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
+                dom.navTabImport.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
                 dom.appHeaderTitle.innerText = "YUYU的卡路里GPS";
                 if (map) map.invalidateSize();
             });
@@ -1115,10 +1182,24 @@
                 toggleSidebar(false);
                 dom.viewWorkout.classList.add('hidden');
                 dom.viewHistory.classList.remove('hidden');
+                dom.viewImport.classList.add('hidden');
                 dom.navTabHistory.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 font-semibold text-xs transition text-left";
                 dom.navTabWorkout.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
+                dom.navTabImport.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
                 dom.appHeaderTitle.innerText = "運動歷史紀錄";
                 renderHistoryList();
+            });
+
+            dom.navTabImport.addEventListener('click', () => {
+                toggleSidebar(false);
+                dom.viewWorkout.classList.add('hidden');
+                dom.viewHistory.classList.add('hidden');
+                dom.viewImport.classList.remove('hidden');
+                dom.navTabImport.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 font-semibold text-xs transition text-left";
+                dom.navTabWorkout.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
+                dom.navTabHistory.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
+                dom.appHeaderTitle.innerText = "匯入檢視與軌跡分析";
+                if (importTrackMapInstance) setTimeout(() => importTrackMapInstance.invalidateSize(), 50);
             });
         }
 
@@ -1774,6 +1855,7 @@
                     durationTime: timeStr,
                     calories: Number(APP.totalCalories.toFixed(2)),
                     estimatedCalories: Number(APP.totalCalories.toFixed(2)),
+                    calorieFormula: '每秒：MET × 體重(kg) × 經過秒數 ÷ 3600，累加為估算熱量',
                     averageSpeedKmh: Number(avgSpeedKmh.toFixed(2)),
                     maxSpeedKmh: Number(maxInstantSpeedKmh.toFixed(2)),
                     maxAdjacentSpeedKmh: Number(maxAdjacentSpeedKmh.toFixed(2)),
@@ -1783,6 +1865,7 @@
                     segments,
                     straightDistanceKm: Number(straightDistKm.toFixed(2))
                 },
+                meetingPoint: APP.meetingPoint || null,
                 gpsPath: [...APP.recordedPath],
                 samples: [...APP.trackSamples]
             };
@@ -1874,6 +1957,7 @@
                 ['運動時間', summary.durationSeconds ?? '', '秒'],
                 ['運動時間格式', summary.durationTime ?? '', '分:秒'],
                 ['估算熱量', summary.estimatedCalories ?? summary.calories ?? '', 'kcal'],
+                ['熱量算式', summary.calorieFormula ?? '', ''],
                 ['平均速度', summary.averageSpeedKmh ?? '', 'km/h'],
                 ['最高速度', summary.maxSpeedKmh ?? '', 'km/h'],
                 ['最快相鄰點速度', summary.maxAdjacentSpeedKmh ?? summary.maxSpeedKmh ?? '', 'km/h'],
@@ -1894,6 +1978,110 @@
             link.remove();
             URL.revokeObjectURL(url);
         }
+
+        function downloadTrackJson(recordId) {
+            const record = APP.history.find(item => item.id === recordId);
+            if (!record) return;
+            const trackFile = record.trackFile || {
+                format: 'yuyu-calorie-gps-track-legacy',
+                generatedAt: record.dateStr,
+                workout: { user: {} },
+                summary: getTrackSummary(record),
+                gpsPath: record.pathCoordinates || [],
+                samples: []
+            };
+            const exportTrack = { ...trackFile };
+            delete exportTrack.samples;
+            exportTrack.exportNote = '任務 6 分析檔：包含運動摘要與 GPS 路徑，不包含逐秒取樣資料。';
+            const json = JSON.stringify(exportTrack, null, 2);
+            const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `workout-track-${record.dateStr.replace(/[^0-9]/g, '') || recordId}.track.json`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        function normalizeImportedPoint(point) {
+            if (!point) return null;
+            const lat = Number(point.lat ?? point.latitude);
+            const lng = Number(point.lng ?? point.lon ?? point.longitude);
+            return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+        }
+
+        function formatImportedPoint(point) {
+            const normalized = normalizeImportedPoint(point);
+            return normalized ? `${normalized.lat.toFixed(5)}, ${normalized.lng.toFixed(5)}` : '未記錄';
+        }
+
+        function showImportedTrack(parsed, fileName) {
+            const track = parsed.trackFile?.summary ? parsed.trackFile : parsed;
+            const summary = track.summary || {};
+            const rawPath = track.gpsPath || track.pathCoordinates || parsed.gpsPath || parsed.pathCoordinates || [];
+            const path = rawPath.map(normalizeImportedPoint).filter(Boolean);
+            if (!path.length) throw new Error('JSON 中找不到 gpsPath 軌跡資料');
+
+            const start = path[0];
+            const end = path[path.length - 1];
+            const meetingPoint = track.meetingPoint || parsed.meetingPoint;
+            dom.importTrackPanel.classList.remove('hidden');
+            dom.importDistance.innerText = `${Number(summary.distanceKm || 0).toFixed(2)} km`;
+            dom.importDuration.innerText = summary.durationTime || `${Math.floor(Number(summary.durationSeconds || 0) / 60)}:${String(Number(summary.durationSeconds || 0) % 60).padStart(2, '0')}`;
+            dom.importAverageSpeed.innerText = `${Number(summary.averageSpeedKmh || 0).toFixed(1)} km/h`;
+            dom.importCalories.innerText = `${Number(summary.estimatedCalories ?? summary.calories ?? 0).toFixed(1)} kcal`;
+            dom.importStartPoint.innerText = formatImportedPoint(start);
+            dom.importEndPoint.innerText = formatImportedPoint(end);
+            dom.importMeetingPoint.innerText = meetingPoint ? formatImportedPoint(meetingPoint) : '未記錄';
+            dom.importPoints.innerText = `${summary.recordedPoints || path.length} 點`;
+            dom.importCalorieFormula.innerText = `熱量算式：${summary.calorieFormula || 'MET × 體重(kg) × 運動時間(小時) ÷ 200 × 3.5（依運動強度估算）'}`;
+            dom.trackImportStatus.innerText = `已載入：${fileName}，請檢查地圖與摘要數據。`;
+
+            if (!importTrackMapInstance) {
+                importTrackMapInstance = L.map('importTrackMap', { zoomControl: true });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(importTrackMapInstance);
+            }
+            if (importTrackLayer) importTrackLayer.clearLayers();
+            importTrackLayer = L.layerGroup().addTo(importTrackMapInstance);
+            const latLngs = path.map(point => [point.lat, point.lng]);
+            L.polyline(latLngs, { color: '#f97316', weight: 5, opacity: 0.9 }).addTo(importTrackLayer);
+            L.circleMarker([start.lat, start.lng], { radius: 8, color: '#10b981', fillColor: '#10b981', fillOpacity: 1 }).bindTooltip('起點（綠色）').addTo(importTrackLayer);
+            L.circleMarker([end.lat, end.lng], { radius: 8, color: '#38bdf8', fillColor: '#38bdf8', fillOpacity: 1 }).bindTooltip('終點（藍色）').addTo(importTrackLayer);
+            if (meetingPoint) {
+                const point = normalizeImportedPoint(meetingPoint);
+                if (point) L.circleMarker([point.lat, point.lng], { radius: 8, color: '#f97316', fillColor: '#fb923c', fillOpacity: 1 }).bindTooltip('集合點（橘色）').addTo(importTrackLayer);
+            }
+            importTrackMapInstance.fitBounds(L.latLngBounds(latLngs), { padding: [24, 24] });
+            setTimeout(() => importTrackMapInstance.invalidateSize(), 50);
+            dom.copilotTrackPrompt.innerText = `/analyze-track #file:my-tracks/${fileName}`;
+        }
+
+        dom.trackImportInput.addEventListener('change', async (event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            try {
+                const parsed = JSON.parse(await file.text());
+                showImportedTrack(parsed, file.name);
+            } catch (error) {
+                dom.importTrackPanel.classList.add('hidden');
+                dom.trackImportStatus.innerText = `匯入失敗：${error.message || 'JSON 格式不正確'}。`;
+            }
+        });
+
+        dom.btnCopyCopilotPrompt.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(dom.copilotTrackPrompt.innerText);
+                dom.btnCopyCopilotPrompt.innerText = '已複製';
+                setTimeout(() => { dom.btnCopyCopilotPrompt.innerText = '複製分析指令'; }, 1500);
+            } catch (error) {
+                alertUserModalCustom('無法自動複製，請手動選取分析指令。');
+            }
+        });
 
         function populateDetailModal(metrics) {
             const summary = getTrackSummary(metrics);
@@ -1983,6 +2171,9 @@
                         <button class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-sky-950/70 text-sky-300 flex items-center justify-center border border-slate-700 transition history-export-btn" data-id="${rec.id}" title="匯出運動摘要 CSV">
                             <i class="fa-solid fa-download text-xs"></i>
                         </button>
+                        <button class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-amber-950/70 text-amber-300 flex items-center justify-center border border-slate-700 transition history-json-btn" data-id="${rec.id}" title="匯出軌跡 JSON">
+                            <i class="fa-solid fa-file-code text-xs"></i>
+                        </button>
                     </div>
                 `;
                 dom.historyListContainer.appendChild(card);
@@ -2035,6 +2226,13 @@
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     downloadTrackFile(e.currentTarget.dataset.id);
+                });
+            });
+
+            document.querySelectorAll('.history-json-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    downloadTrackJson(e.currentTarget.dataset.id);
                 });
             });
         }
