@@ -482,7 +482,7 @@
                         <div id="detailStraight" class="digital-font text-lg font-bold text-purple-300 mt-0.5">0.00 km</div>
                     </div>
                     <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
-                        <div class="text-slate-400 text-[11px]">8. 最快相鄰點速度 (Max Instant Speed)</div>
+                        <div class="text-slate-400 text-[11px]">8. 最快相鄰點速度 (Max Adjacent Speed)</div>
                         <div id="detailMaxSpeed" class="digital-font text-lg font-bold text-rose-400 mt-0.5">0.0 km/h</div>
                     </div>
                     <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
@@ -1631,6 +1631,23 @@
             dom.metricDuration.innerText = `${m}:${s}`;
         }
 
+        function calculateMaxAdjacentSpeedKmh(path) {
+            let maxSpeedKmh = 0;
+            for (let i = 1; i < path.length; i++) {
+                const previous = path[i - 1];
+                const current = path[i];
+                const previousTimestamp = Number(previous.timestamp);
+                const currentTimestamp = Number(current.timestamp);
+                const elapsedSeconds = (currentTimestamp - previousTimestamp) / 1000;
+                if (!Number.isFinite(elapsedSeconds) || elapsedSeconds <= 0) continue;
+
+                const distanceMeters = calculateDistanceMeters(previous.lat, previous.lng, current.lat, current.lng);
+                const adjacentSpeedKmh = (distanceMeters / elapsedSeconds) * 3.6;
+                if (Number.isFinite(adjacentSpeedKmh)) maxSpeedKmh = Math.max(maxSpeedKmh, adjacentSpeedKmh);
+            }
+            return maxSpeedKmh;
+        }
+
         function generateSessionMetrics() {
             const distKm = APP.totalDistanceMeters / 1000;
             const durationHrs = APP.elapsedSeconds > 0 ? (APP.elapsedSeconds / 3600) : 0.0001;
@@ -1652,10 +1669,11 @@
                 straightDistKm = calculateDistanceMeters(start.lat, start.lng, end.lat, end.lng) / 1000;
             }
 
-            let maxSpeed = 0;
-            for (const p of APP.recordedPath) {
-                if (p.speed > maxSpeed) maxSpeed = p.speed;
+            let maxInstantSpeedKmh = 0;
+            for (const point of APP.recordedPath) {
+                if (point.speed > maxInstantSpeedKmh) maxInstantSpeedKmh = point.speed;
             }
+            const maxAdjacentSpeedKmh = calculateMaxAdjacentSpeedKmh(APP.recordedPath);
 
             const averageCadence = APP.trackSamples.length
                 ? APP.trackSamples.reduce((sum, sample) => sum + sample.cadenceSPM, 0) / APP.trackSamples.length
@@ -1678,8 +1696,10 @@
                     durationSeconds: APP.elapsedSeconds,
                     durationTime: timeStr,
                     calories: Number(APP.totalCalories.toFixed(2)),
+                    estimatedCalories: Number(APP.totalCalories.toFixed(2)),
                     averageSpeedKmh: Number(avgSpeedKmh.toFixed(2)),
-                    maxSpeedKmh: Number(maxSpeed.toFixed(2)),
+                    maxSpeedKmh: Number(maxInstantSpeedKmh.toFixed(2)),
+                    maxAdjacentSpeedKmh: Number(maxAdjacentSpeedKmh.toFixed(2)),
                     steps: APP.totalSteps,
                     averageCadenceSPM: Number(averageCadence.toFixed(2)),
                     recordedPoints: validPoints,
@@ -1697,10 +1717,12 @@
                 durationTime: timeStr,
                 avgSpeed: avgSpeedKmh.toFixed(1),
                 calories: APP.totalCalories.toFixed(1),
+                estimatedCalories: APP.totalCalories.toFixed(1),
                 validPoints: validPoints,
                 segments: segments,
                 straightDistance: straightDistKm.toFixed(2),
-                maxInstantSpeed: maxSpeed.toFixed(1),
+                maxInstantSpeed: maxInstantSpeedKmh.toFixed(1),
+                maxAdjacentSpeed: maxAdjacentSpeedKmh.toFixed(1),
                 pathCoordinates: [...APP.recordedPath],
                 steps: APP.totalSteps,
                 averageCadence: averageCadence.toFixed(1),
@@ -1739,8 +1761,10 @@
             return {
                 distanceKm: Number(metrics.totalDistance || 0), durationTime: metrics.durationTime || '00:00',
                 averageSpeedKmh: Number(metrics.avgSpeed || 0), calories: Number(metrics.calories || 0),
+                estimatedCalories: Number(metrics.estimatedCalories || metrics.calories || 0),
                 recordedPoints: Number(metrics.validPoints || 0), segments: Number(metrics.segments || 0),
                 straightDistanceKm: Number(metrics.straightDistance || 0), maxSpeedKmh: Number(metrics.maxInstantSpeed || 0),
+                maxAdjacentSpeedKmh: Number(metrics.maxAdjacentSpeed || metrics.maxInstantSpeed || 0),
                 steps: Number(metrics.steps || 0), averageCadenceSPM: Number(metrics.averageCadence || 0)
             };
         }
@@ -1772,9 +1796,10 @@
                 ['總距離', summary.distanceKm ?? '', 'km'],
                 ['運動時間', summary.durationSeconds ?? '', '秒'],
                 ['運動時間格式', summary.durationTime ?? '', '分:秒'],
-                ['卡路里', summary.calories ?? '', 'kcal'],
+                ['估算熱量', summary.estimatedCalories ?? summary.calories ?? '', 'kcal'],
                 ['平均速度', summary.averageSpeedKmh ?? '', 'km/h'],
                 ['最高速度', summary.maxSpeedKmh ?? '', 'km/h'],
+                ['最快相鄰點速度', summary.maxAdjacentSpeedKmh ?? summary.maxSpeedKmh ?? '', 'km/h'],
                 ['步數', summary.steps ?? '', '步'],
                 ['平均步頻', summary.averageCadenceSPM ?? '', 'SPM'],
                 ['有效定位點', summary.recordedPoints ?? '', '點'],
@@ -1802,7 +1827,7 @@
             dom.detailPoints.innerText = `${summary.recordedPoints} 點`;
             dom.detailSegments.innerText = `${summary.segments} 段`;
             dom.detailStraight.innerText = `${summary.straightDistanceKm.toFixed(2)} km`;
-            dom.detailMaxSpeed.innerText = `${summary.maxSpeedKmh.toFixed(1)} km/h`;
+            dom.detailMaxSpeed.innerText = `${(summary.maxAdjacentSpeedKmh ?? summary.maxSpeedKmh).toFixed(1)} km/h`;
             dom.detailSteps.innerText = `${summary.steps} 步`;
             dom.detailCadence.innerText = `${summary.averageCadenceSPM.toFixed(1)} SPM`;
         }
