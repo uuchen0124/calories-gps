@@ -1761,12 +1761,6 @@
                 samples: []
             };
             const summary = trackFile.summary || {};
-            const path = trackFile.gpsPath || [];
-            const samples = trackFile.samples?.length ? trackFile.samples : path.map(point => ({
-                timestamp: point.timestamp ? new Date(point.timestamp).toISOString() : '',
-                elapsedSeconds: '', latitude: point.lat, longitude: point.lng,
-                distanceMeters: '', speedKmh: point.speed, cadenceSPM: '', met: '', calories: ''
-            }));
             const rows = [
                 ['運動摘要'],
                 ['項目', '數值', '單位'],
@@ -1785,11 +1779,7 @@
                 ['平均步頻', summary.averageCadenceSPM ?? '', 'SPM'],
                 ['有效定位點', summary.recordedPoints ?? '', '點'],
                 ['運動段數', summary.segments ?? '', '段'],
-                ['起終點直線距離', summary.straightDistanceKm ?? '', 'km'],
-                [],
-                ['GPS／感測時間序列'],
-                ['時間', '運動秒數', '緯度', '經度', '累積距離(m)', '速度(km/h)', '步頻(SPM)', 'MET', '累積卡路里(kcal)'],
-                ...samples.map(sample => [sample.timestamp, sample.elapsedSeconds, sample.latitude, sample.longitude, sample.distanceMeters, sample.speedKmh, sample.cadenceSPM, sample.met, sample.calories])
+                ['起終點直線距離', summary.straightDistanceKm ?? '', 'km']
             ];
             const csv = '\uFEFF' + rows.map(row => row.map(csvCell).join(',')).join('\r\n');
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -1888,7 +1878,7 @@
                         <button class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-rose-950/70 text-rose-400 flex items-center justify-center border border-slate-700 transition history-delete-btn" data-id="${rec.id}" title="刪除此筆紀錄">
                             <i class="fa-solid fa-trash-can text-xs"></i>
                         </button>
-                        <button class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-sky-950/70 text-sky-300 flex items-center justify-center border border-slate-700 transition history-export-btn" data-id="${rec.id}" title="匯出軌跡表格 CSV">
+                        <button class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-sky-950/70 text-sky-300 flex items-center justify-center border border-slate-700 transition history-export-btn" data-id="${rec.id}" title="匯出運動摘要 CSV">
                             <i class="fa-solid fa-download text-xs"></i>
                         </button>
                     </div>
