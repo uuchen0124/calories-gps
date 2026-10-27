@@ -467,6 +467,7 @@
                         <button id="btnCreateForest" class="px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold"><i class="fa-solid fa-plus mr-1"></i>建立新森林</button>
                         <button id="btnForestInvites" class="relative px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold"><i class="fa-solid fa-envelope mr-1"></i>森林邀請<span id="forestInviteDot" class="hidden absolute -right-1 -top-1 w-3 h-3 rounded-full bg-rose-500 border-2 border-slate-800"></span></button>
                         <select id="forestSelect" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs min-w-40"></select>
+                        <button id="btnForestMembers" class="px-3 py-2 rounded-xl bg-violet-400 hover:bg-violet-300 text-slate-950 text-xs font-bold"><i class="fa-solid fa-users mr-1"></i>森林成員</button>
                         <button id="btnRenameForest" class="px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold"><i class="fa-solid fa-pen mr-1"></i>更改名稱</button>
                         <button id="btnOpenForestExchange" class="px-3 py-2 rounded-xl bg-lime-400 hover:bg-lime-300 text-slate-950 text-xs font-bold"><i class="fa-solid fa-seedling mr-1"></i>對換植物</button>
                     </div>
@@ -514,6 +515,13 @@
         <div class="w-full max-w-lg bg-slate-900 border border-rose-400/40 rounded-2xl p-5 shadow-2xl space-y-4">
             <div class="flex items-center justify-between"><h3 class="text-base font-bold text-white"><i class="fa-solid fa-envelope text-rose-300 mr-2"></i>森林邀請</h3><button id="btnCloseForestInvites" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button></div>
             <div id="forestInvitesList" class="space-y-2"></div>
+        </div>
+    </div>
+    <div id="forestMembersModal" class="hidden fixed inset-0 z-[1300] bg-slate-950/80 backdrop-blur-sm items-center justify-center p-4">
+        <div class="w-full max-w-lg bg-slate-900 border border-violet-400/40 rounded-2xl p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between"><h3 class="text-base font-bold text-white"><i class="fa-solid fa-users text-violet-300 mr-2"></i>森林成員</h3><button id="btnCloseForestMembers" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button></div>
+            <p id="forestMembersSummary" class="text-xs text-slate-400"></p>
+            <div id="forestMembersList" class="space-y-2 max-h-[60vh] overflow-y-auto overscroll-contain"></div>
         </div>
     </div>
     <div id="forestInsufficientModal" class="hidden fixed inset-0 z-[1300] bg-slate-950/80 backdrop-blur-sm items-center justify-center p-4">
@@ -1001,6 +1009,11 @@
             btnForestInvites: document.getElementById('btnForestInvites'),
             forestInviteDot: document.getElementById('forestInviteDot'),
             forestSelect: document.getElementById('forestSelect'),
+            btnForestMembers: document.getElementById('btnForestMembers'),
+            forestMembersModal: document.getElementById('forestMembersModal'),
+            btnCloseForestMembers: document.getElementById('btnCloseForestMembers'),
+            forestMembersSummary: document.getElementById('forestMembersSummary'),
+            forestMembersList: document.getElementById('forestMembersList'),
             btnRenameForest: document.getElementById('btnRenameForest'),
             btnOpenForestMemberInvite: document.getElementById('btnOpenForestMemberInvite'),
             forestMemberInvitePanel: document.getElementById('forestMemberInvitePanel'),
@@ -1716,6 +1729,43 @@
                 const plantHtml = entries.length ? entries.flatMap(item => Array.from({ length: Number(item.count || 0) }, (_, plantIndex) => `<div class="forest-plant-instance" title="${item.info.name}" style="margin-left:${(plantIndex * 13 + item.uid.length) % 9}px;transform:rotate(${(plantIndex * 11 + item.uid.length) % 17 - 8}deg)">${forestSpriteHtml(item.type, item.info, 58, item.uid)}</div>`)).join('') : '<span class="text-xs text-slate-500">尚未種植</span>';
                 const background = `linear-gradient(rgba(5, 15, 18, .48), rgba(5, 15, 18, .62)), url('${landInfo.image}')`;
                 return `<article class="${unlocked ? 'border-lime-500/40' : 'border-slate-700 opacity-70'} border rounded-2xl p-4 min-h-44 bg-cover bg-center overflow-hidden flex flex-col" style="background-image:${background};background-position:${landInfo.position}"><div class="flex items-center justify-between gap-2"><h3 class="text-sm font-bold ${unlocked ? 'text-lime-100' : 'text-slate-300'} drop-shadow">土地 ${landNumber} · ${landInfo.name}</h3><span class="text-[10px] ${unlocked ? 'text-emerald-200' : 'text-slate-300'} bg-slate-950/55 rounded-full px-2 py-1">${unlocked ? `${plantTotal} / 20 株` : '完成前一片土地後解鎖'}</span></div><div class="forest-plants-row">${unlocked ? plantHtml : '<i class="fa-solid fa-lock text-slate-200/70 text-2xl"></i>'}</div></article>`;
+            }).join('');
+        }
+
+        async function renderForestMembers() {
+            const data = APP.forestData;
+            const user = auth?.currentUser;
+            if (!data || !user || !data.members?.length) {
+                dom.forestMembersSummary.innerText = '請先建立或選擇森林。';
+                dom.forestMembersList.innerHTML = '';
+                return;
+            }
+            const contributions = Object.fromEntries(data.members.map(uid => [uid, { total: 0, plants: {} }]));
+            Object.values(data.plants || {}).forEach(land => Object.entries(land || {}).forEach(([type, counts]) => {
+                Object.entries(counts || {}).forEach(([uid, count]) => {
+                    if (!contributions[uid]) contributions[uid] = { total: 0, plants: {} };
+                    const amount = Number(count || 0);
+                    contributions[uid].total += amount;
+                    contributions[uid].plants[type] = (contributions[uid].plants[type] || 0) + amount;
+                });
+            }));
+            const members = await Promise.all(Object.keys(contributions).map(async uid => {
+                let profile = {};
+                try {
+                    const snapshot = await getDoc(doc(db, 'artifacts', appId, 'publicProfiles', uid));
+                    if (snapshot.exists()) profile = snapshot.data();
+                } catch (error) {
+                    console.warn('Forest member profile load error:', error);
+                }
+                return { uid, profile, contribution: contributions[uid] };
+            }));
+            members.sort((a, b) => b.contribution.total - a.contribution.total);
+            dom.forestMembersSummary.innerText = `${forestDisplayName(data)}共有 ${members.length} 位成員，依這片森林的種植株數排列。`;
+            dom.forestMembersList.innerHTML = members.map(member => {
+                const nickname = member.profile.nickname || data.memberNames?.[member.uid] || member.profile.friendCode || `${member.uid.slice(0, 8)}...`;
+                const avatar = member.profile.avatarUrl ? `<img src="${String(member.profile.avatarUrl).replace(/"/g, '&quot;')}" alt="頭貼" class="w-full h-full object-cover">` : nickname.slice(0, 2).toUpperCase();
+                const details = Object.entries(member.contribution.plants).map(([type, count]) => `${FOREST_PLANTS[type]?.name || type} ${count} 株`).join(' · ') || '尚未種植';
+                return `<div class="rounded-xl border border-slate-700 bg-slate-800/80 p-3 flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 flex items-center justify-center font-bold overflow-hidden shrink-0">${avatar}</div><div class="min-w-0 flex-1"><div class="text-sm font-bold text-white truncate">${nickname}${member.uid === user.uid ? '（我）' : ''}</div><div class="text-[11px] text-slate-400 mt-1">${details}</div></div><strong class="text-amber-300 text-sm whitespace-nowrap">${member.contribution.total} 株</strong></div>`;
             }).join('');
         }
 
@@ -3273,6 +3323,15 @@
         dom.btnCloseForestInvites.addEventListener('click', () => {
             dom.forestInvitesModal.classList.add('hidden');
             dom.forestInvitesModal.classList.remove('flex');
+        });
+        dom.btnForestMembers.addEventListener('click', async () => {
+            await renderForestMembers();
+            dom.forestMembersModal.classList.remove('hidden');
+            dom.forestMembersModal.classList.add('flex');
+        });
+        dom.btnCloseForestMembers.addEventListener('click', () => {
+            dom.forestMembersModal.classList.add('hidden');
+            dom.forestMembersModal.classList.remove('flex');
         });
         dom.btnOpenForestMemberInvite.addEventListener('click', async () => {
             const members = APP.forestData?.members || [];
