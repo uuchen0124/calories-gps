@@ -295,7 +295,7 @@
                 <div class="flex items-center gap-3 text-xs text-slate-400">
                     <div class="flex items-center gap-1.5">
                         <i class="fa-solid fa-weight-scale text-slate-500"></i>
-                        <span id="summaryUserInfo">體重: 60kg | 25歲</span>
+                        <span id="summaryUserInfo">體重: 60kg | 身高: 170cm | 25歲</span>
                     </div>
                     <div class="h-3 w-px bg-slate-700"></div>
                     <div class="flex items-center gap-1.5">
@@ -354,6 +354,10 @@
                 <div>
                     <label class="block text-slate-400 mb-1">體重 (kg)：</label>
                     <input id="inputWeight" type="number" min="20" max="250" value="60" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">身高 (cm)：</label>
+                    <input id="inputHeight" type="number" min="80" max="250" value="170" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500">
                 </div>
                 <div>
                     <label class="block text-slate-400 mb-1">年齡 (歲)：</label>
@@ -693,7 +697,7 @@
         }
 
         const APP = {
-            user: { weight: 60, age: 25, gender: 'M' },
+            user: { weight: 60, height: 170, age: 25, gender: 'M' },
             isTracking: false,
             startTime: null,
             elapsedSeconds: 0,
@@ -770,6 +774,7 @@
             btnSaveUserModal: document.getElementById('btnSaveUserModal'),
             userModal: document.getElementById('userModal'),
             inputWeight: document.getElementById('inputWeight'),
+            inputHeight: document.getElementById('inputHeight'),
             inputAge: document.getElementById('inputAge'),
             summaryUserInfo: document.getElementById('summaryUserInfo'),
             
@@ -1317,13 +1322,13 @@
                 : (goalType === 'duration' ? value / 60 * 6 * 1000 : value * 1000);
             const targetSeconds = goalType === 'duration' ? value * 60 : targetMeters / (5 * 1000 / 3600);
             const startTime = new Date(dom.routePlanStartTime.value || Date.now());
-            const baseRadius = Math.max(180, targetMeters / (2 * Math.PI));
+            const baseRadius = Math.max(30, targetMeters / (2 * Math.PI));
             dom.btnPlanShadeRoute.disabled = true;
             dom.shadeRouteStatus.innerText = '正在查詢道路候選路線…';
             clearPlannedRoute();
             try {
                 const candidates = [];
-                const scales = [0.45, 0.7, 1.0, 1.35, 1.7];
+                const scales = targetMeters < 500 ? [0.2, 0.35, 0.55, 0.8, 1.1] : [0.45, 0.7, 1.0, 1.35, 1.7];
                 const routeRequests = scales.map((scale, index) => {
                     const rotation = index * 72;
                     const waypointBearings = targetMeters < 1800 ? [rotation, rotation + 180] : [rotation, rotation + 120, rotation + 240];
@@ -1342,7 +1347,7 @@
                 const shadows = shadeEnabled ? buildShadowPolygons(buildings, origin, startTime) : [];
                 const scored = candidates.map(route => ({
                     route,
-                    shade: shadeEnabled ? scoreShade(route.geometry.coordinates, shadows, origin) : { coverage: 0, sunlight: 1 },
+                    shade: shadeEnabled ? scoreShade(route.geometry.coordinates, shadows, origin) : (daylightCache?.isNight ? { coverage: 1, sunlight: 0 } : { coverage: 0, sunlight: 1 }),
                     fitError: goalType === 'duration'
                         ? Math.abs(route.duration - targetSeconds)
                         : Math.abs(route.distance - targetMeters)
@@ -1666,7 +1671,7 @@
                 workout: {
                     startedAt: APP.startTime ? new Date(APP.startTime).toISOString() : null,
                     endedAt: new Date().toISOString(),
-                    user: { weightKg: APP.user.weight, age: APP.user.age, gender: APP.user.gender }
+                    user: { weightKg: APP.user.weight, heightCm: APP.user.height, age: APP.user.age, gender: APP.user.gender }
                 },
                 summary: {
                     distanceKm: Number(distKm.toFixed(2)),
@@ -1740,6 +1745,11 @@
             };
         }
 
+        function csvCell(value) {
+            const text = value === null || value === undefined ? '' : String(value);
+            return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+        }
+
         function downloadTrackFile(recordId) {
             const record = APP.history.find(item => item.id === recordId);
             if (!record) return;
@@ -1750,11 +1760,43 @@
                 gpsPath: record.pathCoordinates || [],
                 samples: []
             };
-            const blob = new Blob([JSON.stringify(trackFile, null, 2)], { type: 'application/json' });
+            const summary = trackFile.summary || {};
+            const path = trackFile.gpsPath || [];
+            const samples = trackFile.samples?.length ? trackFile.samples : path.map(point => ({
+                timestamp: point.timestamp ? new Date(point.timestamp).toISOString() : '',
+                elapsedSeconds: '', latitude: point.lat, longitude: point.lng,
+                distanceMeters: '', speedKmh: point.speed, cadenceSPM: '', met: '', calories: ''
+            }));
+            const rows = [
+                ['運動摘要'],
+                ['項目', '數值', '單位'],
+                ['開始時間', trackFile.workout?.startedAt || '', 'ISO 8601'],
+                ['結束時間', trackFile.workout?.endedAt || '', 'ISO 8601'],
+                ['體重', trackFile.workout?.user?.weightKg ?? '', 'kg'],
+                ['身高', trackFile.workout?.user?.heightCm ?? '', 'cm'],
+                ['年齡', trackFile.workout?.user?.age ?? '', '歲'],
+                ['總距離', summary.distanceKm ?? '', 'km'],
+                ['運動時間', summary.durationSeconds ?? '', '秒'],
+                ['運動時間格式', summary.durationTime ?? '', '分:秒'],
+                ['卡路里', summary.calories ?? '', 'kcal'],
+                ['平均速度', summary.averageSpeedKmh ?? '', 'km/h'],
+                ['最高速度', summary.maxSpeedKmh ?? '', 'km/h'],
+                ['步數', summary.steps ?? '', '步'],
+                ['平均步頻', summary.averageCadenceSPM ?? '', 'SPM'],
+                ['有效定位點', summary.recordedPoints ?? '', '點'],
+                ['運動段數', summary.segments ?? '', '段'],
+                ['起終點直線距離', summary.straightDistanceKm ?? '', 'km'],
+                [],
+                ['GPS／感測時間序列'],
+                ['時間', '運動秒數', '緯度', '經度', '累積距離(m)', '速度(km/h)', '步頻(SPM)', 'MET', '累積卡路里(kcal)'],
+                ...samples.map(sample => [sample.timestamp, sample.elapsedSeconds, sample.latitude, sample.longitude, sample.distanceMeters, sample.speedKmh, sample.cadenceSPM, sample.met, sample.calories])
+            ];
+            const csv = '\uFEFF' + rows.map(row => row.map(csvCell).join(',')).join('\r\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `workout-track-${record.dateStr.replace(/[^0-9]/g, '') || recordId}.json`;
+            link.download = `workout-track-${record.dateStr.replace(/[^0-9]/g, '') || recordId}.csv`;
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -1846,7 +1888,7 @@
                         <button class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-rose-950/70 text-rose-400 flex items-center justify-center border border-slate-700 transition history-delete-btn" data-id="${rec.id}" title="刪除此筆紀錄">
                             <i class="fa-solid fa-trash-can text-xs"></i>
                         </button>
-                        <button class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-sky-950/70 text-sky-300 flex items-center justify-center border border-slate-700 transition history-export-btn" data-id="${rec.id}" title="匯出軌跡 JSON">
+                        <button class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-sky-950/70 text-sky-300 flex items-center justify-center border border-slate-700 transition history-export-btn" data-id="${rec.id}" title="匯出軌跡表格 CSV">
                             <i class="fa-solid fa-download text-xs"></i>
                         </button>
                     </div>
@@ -1932,7 +1974,7 @@
         dom.btnRecenter.addEventListener('click', () => { if (userMarker) map.setView(userMarker.getLatLng(), 16); });
 
         dom.btnOpenUserModal.addEventListener('click', () => {
-            dom.inputWeight.value = APP.user.weight; dom.inputAge.value = APP.user.age;
+            dom.inputWeight.value = APP.user.weight; dom.inputHeight.value = APP.user.height; dom.inputAge.value = APP.user.age;
             dom.userModal.classList.remove('hidden');
         });
         dom.btnCloseUserModal.addEventListener('click', () => dom.userModal.classList.add('hidden'));
@@ -1947,8 +1989,9 @@
 
         dom.btnSaveUserModal.addEventListener('click', () => {
             APP.user.weight = parseFloat(dom.inputWeight.value) || 60;
+            APP.user.height = parseFloat(dom.inputHeight.value) || 170;
             APP.user.age = parseInt(dom.inputAge.value) || 25;
-            dom.summaryUserInfo.innerText = `體重: ${APP.user.weight}kg | ${APP.user.age}歲`;
+            dom.summaryUserInfo.innerText = `體重: ${APP.user.weight}kg | 身高: ${APP.user.height}cm | ${APP.user.age}歲`;
             dom.userModal.classList.add('hidden');
         });
 
