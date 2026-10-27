@@ -87,6 +87,16 @@
         .sidebar-transition {
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        .forest-sprite {
+            display: inline-block;
+            flex: 0 0 auto;
+            background-repeat: no-repeat;
+            background-size: 300% 500%;
+            background-color: rgba(226, 232, 240, .82);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(190, 242, 100, .28);
+            box-shadow: 0 4px 12px rgba(2, 6, 23, .25);
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between select-none overflow-x-hidden">
@@ -459,10 +469,17 @@
             <div class="flex items-center justify-between"><h3 class="text-base font-bold text-white"><i class="fa-solid fa-leaf text-lime-300 mr-2"></i>對換植物</h3><button id="btnCloseForestExchange" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button></div>
             <p class="text-xs text-slate-400">1 大卡 = 1 顆星星。幼苗每次 30 顆星星換 8 株；花朵或大樹每次 100 顆星星換 3 株。</p>
             <label class="block text-xs text-slate-400">選擇土地<select id="forestExchangeLand" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white"></select></label>
-            <div class="grid grid-cols-3 gap-2" id="forestPlantChoices"></div>
+            <div id="forestPlantChoices" class="space-y-3"></div>
             <label class="block text-xs text-slate-400">兌換數量（組）<input id="forestExchangeQuantity" type="number" min="1" max="99" value="1" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white"></label>
             <p id="forestExchangeCost" class="text-xs text-amber-300">請選擇植物</p>
             <button id="btnConfirmForestExchange" class="w-full px-4 py-3 rounded-xl bg-lime-400 hover:bg-lime-300 text-slate-950 font-bold">確認兌換並種植</button>
+        </div>
+    </div>
+    <div id="forestInsufficientModal" class="hidden fixed inset-0 z-[1300] bg-slate-950/80 backdrop-blur-sm items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-slate-900 border border-amber-400/50 rounded-2xl p-5 shadow-2xl space-y-4 text-center">
+            <i class="fa-solid fa-star text-amber-300 text-3xl"></i>
+            <p id="forestInsufficientText" class="text-base font-bold text-white">星星數還不足夠，要不要在運動一下來兌換呢！</p>
+            <button id="btnCloseForestInsufficient" class="w-full px-4 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold">知道了，先去運動</button>
         </div>
     </div>
 
@@ -952,6 +969,9 @@
             forestExchangeQuantity: document.getElementById('forestExchangeQuantity'),
             forestExchangeCost: document.getElementById('forestExchangeCost'),
             btnConfirmForestExchange: document.getElementById('btnConfirmForestExchange'),
+            forestInsufficientModal: document.getElementById('forestInsufficientModal'),
+            forestInsufficientText: document.getElementById('forestInsufficientText'),
+            btnCloseForestInsufficient: document.getElementById('btnCloseForestInsufficient'),
             btnClearHistory: document.getElementById('btnClearHistory'),
             btnGoogleAuth: document.getElementById('btnGoogleAuth'),
             authButtonText: document.getElementById('authButtonText'),
@@ -1386,11 +1406,32 @@
             }
         }
 
-        const FOREST_LANDS = ['晨光草地', '彩虹花園', '風之林', '星河樹海', '月影山谷', '永恆森林'];
+        const FOREST_LANDS = [
+            { name: '晨光草地', image: 'assets/forest/forest-path.jpg', position: 'center bottom' },
+            { name: '彩虹花園', image: 'assets/forest/forest-path.jpg', position: 'center 35%' },
+            { name: '風之林', image: 'assets/forest/forest-path.jpg', position: 'center 65%' },
+            { name: '星河樹海', image: 'assets/forest/starry-sky.jpg', position: 'center center' },
+            { name: '月影山谷', image: 'assets/forest/moon-reeds.jpg', position: 'center center' },
+            { name: '永恆森林', image: 'assets/forest/forest-path.jpg', position: 'center top' }
+        ];
         const FOREST_PLANTS = {
-            seedling: { name: '小幼苗', bundle: 8, cost: 30, icon: 'fa-seedling' },
-            flower: { name: '花朵', bundle: 3, cost: 100, icon: 'fa-fan' },
-            tree: { name: '大樹', bundle: 3, cost: 100, icon: 'fa-tree' }
+            sproutA: { name: '嫩葉芽', cost: 30, group: '30', sprite: 'plant', position: '0% 0%' },
+            sproutB: { name: '圓葉芽', cost: 30, group: '30', sprite: 'plant', position: '50% 0%' },
+            sproutC: { name: '青草芽', cost: 30, group: '30', sprite: 'plant', position: '100% 0%' },
+            flowerA: { name: '晨光小花', cost: 100, group: '100', sprite: 'plant', position: '0% 22%' },
+            flowerB: { name: '彩瓣花叢', cost: 100, group: '100', sprite: 'plant', position: '50% 22%' },
+            flowerC: { name: '星點花球', cost: 100, group: '100', sprite: 'plant', position: '100% 22%' },
+            treeA: { name: '細葉小樹', cost: 200, group: '200', sprite: 'tree', position: '0% 0%' },
+            treeB: { name: '圓冠大樹', cost: 200, group: '200', sprite: 'tree', position: '50% 45%' },
+            treeC: { name: '高聳森林樹', cost: 200, group: '200', sprite: 'tree', position: '100% 75%' },
+            seedling: { name: '小幼苗', cost: 30, group: '30', sprite: 'plant', position: '0% 0%' },
+            flower: { name: '花朵', cost: 100, group: '100', sprite: 'plant', position: '50% 22%' },
+            tree: { name: '大樹', cost: 200, group: '200', sprite: 'tree', position: '50% 45%' }
+        };
+        const FOREST_GROUPS = {
+            '30': { label: '30 星星區 · 幼苗與地被植物', color: 'emerald' },
+            '100': { label: '100 星星區 · 花朵與灌木', color: 'pink' },
+            '200': { label: '200 星星區 · 大樹與森林植栽', color: 'lime' }
         };
 
         function totalEarnedStars() {
@@ -1479,18 +1520,28 @@
             dom.forestAvailableStars.innerText = available;
             dom.forestLandProgress.innerText = `${data?.unlockedLands || 1} / ${FOREST_LANDS.length}`;
             dom.forestFriendName.innerText = APP.forestFriendUid ? (dom.forestFriendSelect.selectedOptions[0]?.textContent || '好友') : '尚未選擇';
-            dom.forestLands.innerHTML = FOREST_LANDS.map((name, index) => {
+            dom.forestLands.innerHTML = FOREST_LANDS.map((landInfo, index) => {
                 const landNumber = index + 1;
                 const unlocked = landNumber <= Number(data?.unlockedLands || 1);
                 const plants = data?.plants?.[landNumber] || {};
+                const plantTotal = Object.values(plants).reduce((sum, counts) => sum + Object.values(counts || {}).reduce((subtotal, count) => subtotal + Number(count || 0), 0), 0);
                 const entries = Object.entries(FOREST_PLANTS).flatMap(([type, info]) => Object.entries(plants[type] || {}).map(([uid, count]) => ({ type, info, uid, count })));
-                const plantHtml = entries.length ? entries.map(item => `<div class="flex flex-col items-center" title="${item.info.name} ${item.count} 株">${plantIconSvg(item.type, plantColorFor(item.uid, item.type), 48)}<span class="text-[10px] text-slate-300">${item.count} 株</span></div>`).join('') : '<span class="text-xs text-slate-500">尚未種植</span>';
-                return `<article class="${unlocked ? 'bg-emerald-950/40 border-lime-500/30' : 'bg-slate-900/70 border-slate-700 opacity-70'} border rounded-2xl p-4 min-h-36"><div class="flex items-center justify-between"><h3 class="text-sm font-bold ${unlocked ? 'text-lime-200' : 'text-slate-500'}">土地 ${landNumber} · ${name}</h3><span class="text-[10px] ${unlocked ? 'text-emerald-300' : 'text-slate-500'}">${unlocked ? '已開發' : '完成前一片土地後解鎖'}</span></div><div class="flex items-end gap-3 mt-4 min-h-16">${unlocked ? plantHtml : '<i class="fa-solid fa-lock text-slate-600 text-2xl"></i>'}</div></article>`;
+                const plantHtml = entries.length ? entries.map(item => `<div class="flex flex-col items-center" title="${item.info.name} ${item.count} 株">${forestSpriteHtml(item.type, item.info, 48)}<span class="text-[10px] text-slate-300">${item.count} 株</span></div>`).join('') : '<span class="text-xs text-slate-500">尚未種植</span>';
+                const background = `linear-gradient(rgba(5, 15, 18, .48), rgba(5, 15, 18, .62)), url('${landInfo.image}')`;
+                return `<article class="${unlocked ? 'border-lime-500/40' : 'border-slate-700 opacity-70'} border rounded-2xl p-4 min-h-44 bg-cover bg-center overflow-hidden" style="background-image:${background};background-position:${landInfo.position}"><div class="flex items-center justify-between gap-2"><h3 class="text-sm font-bold ${unlocked ? 'text-lime-100' : 'text-slate-300'} drop-shadow">土地 ${landNumber} · ${landInfo.name}</h3><span class="text-[10px] ${unlocked ? 'text-emerald-200' : 'text-slate-300'} bg-slate-950/55 rounded-full px-2 py-1">${unlocked ? `${plantTotal} / 20 株` : '完成前一片土地後解鎖'}</span></div><div class="flex items-end gap-3 mt-4 min-h-16">${unlocked ? plantHtml : '<i class="fa-solid fa-lock text-slate-200/70 text-2xl"></i>'}</div></article>`;
             }).join('');
         }
 
+        function forestSpriteHtml(type, info, size = 62) {
+            const source = info.sprite === 'tree' ? 'assets/forest/tree-sprites.jpg' : 'assets/forest/plant-sprites.jpg';
+            return `<span class="forest-sprite" style="width:${size}px;height:${size}px;background-image:url('${source}');background-position:${info.position};" aria-label="${info.name}"></span>`;
+        }
+
         function renderForestPlantChoices() {
-            dom.forestPlantChoices.innerHTML = Object.entries(FOREST_PLANTS).map(([type, info]) => `<button data-plant-type="${type}" class="forest-plant-choice bg-slate-800 border border-slate-700 hover:border-lime-400 rounded-xl p-2 text-center"><div>${plantIconSvg(type, plantColorFor(auth?.currentUser?.uid || 'guest', type), 54)}</div><span class="text-[11px] text-white">${info.name}</span><small class="block text-[10px] text-amber-300">${info.cost} 星 / ${info.bundle} 株</small></button>`).join('');
+            dom.forestPlantChoices.innerHTML = Object.entries(FOREST_GROUPS).map(([group, groupInfo]) => {
+                const choices = Object.entries(FOREST_PLANTS).filter(([, info]) => info.group === group);
+                return `<section class="rounded-xl border border-slate-700 bg-slate-800/70 p-3"><h4 class="text-xs font-bold text-${groupInfo.color}-200 mb-2">${groupInfo.label}</h4><div class="grid grid-cols-3 gap-2">${choices.map(([type, info]) => `<button data-plant-type="${type}" class="forest-plant-choice bg-slate-900/80 border border-slate-700 hover:border-lime-400 rounded-xl p-2 text-center"><div class="flex justify-center">${forestSpriteHtml(type, info)}</div><span class="text-[11px] text-white block">${info.name}</span><small class="block text-[10px] text-amber-300">${info.cost} 星 / 1 株</small></button>`).join('')}</div></section>`;
+            }).join('');
             document.querySelectorAll('.forest-plant-choice').forEach(button => button.addEventListener('click', () => {
                 APP.forestSelectedPlant = button.dataset.plantType;
                 document.querySelectorAll('.forest-plant-choice').forEach(item => item.classList.toggle('border-lime-400', item === button));
@@ -1501,7 +1552,7 @@
         function updateForestExchangeCost() {
             const plant = FOREST_PLANTS[APP.forestSelectedPlant];
             const quantity = Math.max(1, Number(dom.forestExchangeQuantity.value) || 1);
-            dom.forestExchangeCost.innerText = `${plant.name}：${quantity} 組，共 ${plant.cost * quantity} 顆星星，種下 ${plant.bundle * quantity} 株。可用星星：${Math.max(0, totalEarnedStars() - Number(APP.forestWallet?.spentStars || 0))}`;
+            dom.forestExchangeCost.innerText = `${plant.name}：${quantity} 株，共 ${plant.cost * quantity} 顆星星。可用星星：${Math.max(0, totalEarnedStars() - Number(APP.forestWallet?.spentStars || 0))}`;
         }
 
         async function loadForestWallet() {
@@ -1522,19 +1573,25 @@
             const cost = plant.cost * quantity;
             const available = Math.max(0, totalEarnedStars() - Number(APP.forestWallet?.spentStars || 0));
             if (land > Number(APP.forestData.unlockedLands || 1)) { dom.forestStatus.innerText = '這片土地尚未解鎖。'; return; }
-            if (cost > available) { dom.forestStatus.innerText = `星星不足，還需要 ${cost - available} 顆星星。`; return; }
+            if (cost > available) {
+                dom.forestInsufficientText.innerText = `星星數還不足夠，還差 ${cost - available} 顆。要不要在運動一下來兌換呢！`;
+                dom.forestInsufficientModal.classList.remove('hidden');
+                dom.forestInsufficientModal.classList.add('flex');
+                return;
+            }
             const plants = APP.forestData.plants || {};
             plants[land] ||= {};
             plants[land][type] ||= {};
-            plants[land][type][user.uid] = Number(plants[land][type][user.uid] || 0) + plant.bundle * quantity;
+            plants[land][type][user.uid] = Number(plants[land][type][user.uid] || 0) + quantity;
             APP.forestData.plants = plants;
-            if (land >= Number(APP.forestData.unlockedLands || 1)) APP.forestData.unlockedLands = Math.min(FOREST_LANDS.length, land + 1);
+            const landPlantTotal = Object.values(plants[land]).reduce((sum, counts) => sum + Object.values(counts || {}).reduce((subtotal, count) => subtotal + Number(count || 0), 0), 0);
+            if (landPlantTotal >= 20 && land >= Number(APP.forestData.unlockedLands || 1)) APP.forestData.unlockedLands = Math.min(FOREST_LANDS.length, land + 1);
             APP.forestData.updatedAt = new Date().toISOString();
             APP.forestWallet.spentStars = Number(APP.forestWallet.spentStars || 0) + cost;
             const forestRef = doc(db, 'artifacts', appId, 'forests', forestIdForUsers(user.uid, APP.forestFriendUid));
             await setDoc(forestRef, APP.forestData, { merge: true });
             await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'forest', 'wallet'), APP.forestWallet, { merge: true });
-            dom.forestStatus.innerText = `已兌換 ${plant.bundle * quantity} 株${plant.name}，下一片土地已準備解鎖。`;
+            dom.forestStatus.innerText = `已兌換 ${quantity} 株${plant.name}。本土地累積 ${landPlantTotal} / 20 株。`;
             dom.forestExchangeModal.classList.add('hidden');
             dom.forestExchangeModal.classList.remove('flex');
             renderForest();
@@ -2919,7 +2976,7 @@
                 dom.forestStatus.innerText = '請先加入好友並選擇共享森林。';
                 return;
             }
-            dom.forestExchangeLand.innerHTML = Array.from({ length: Number(APP.forestData.unlockedLands || 1) }, (_, index) => `<option value="${index + 1}">土地 ${index + 1} · ${FOREST_LANDS[index]}</option>`).join('');
+            dom.forestExchangeLand.innerHTML = Array.from({ length: Number(APP.forestData.unlockedLands || 1) }, (_, index) => `<option value="${index + 1}">土地 ${index + 1} · ${FOREST_LANDS[index].name}</option>`).join('');
             renderForestPlantChoices();
             updateForestExchangeCost();
             dom.forestExchangeModal.classList.remove('hidden');
@@ -2931,6 +2988,10 @@
             dom.forestExchangeModal.classList.remove('flex');
         });
         dom.btnConfirmForestExchange.addEventListener('click', exchangeForestPlant);
+        dom.btnCloseForestInsufficient.addEventListener('click', () => {
+            dom.forestInsufficientModal.classList.add('hidden');
+            dom.forestInsufficientModal.classList.remove('flex');
+        });
 
         dom.btnOpenDetailModal.addEventListener('click', () => {
             if (APP.currentSessionMetrics) {
