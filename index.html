@@ -532,7 +532,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, getDoc, setDoc, query, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // 諾華健康諮詢中心 / 衛福部食品營養成分資料庫 (每100公克)
         const FOOD_DB = [
@@ -868,7 +868,7 @@
                     await signInWithCustomToken(auth, __initial_auth_token);
                 }
 
-                onAuthStateChanged(auth, (user) => {
+                onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         APP.currentUser = user;
                         if (user.isAnonymous) {
@@ -878,7 +878,11 @@
                             dom.authButtonText.innerText = user.displayName || user.email || "已登入";
                             dom.sidebarUserEmail.innerText = user.email || user.uid;
                         }
+                        await loadUserProfile(user);
                         loadHistoryFromCloud();
+                    } else {
+                        APP.currentUser = null;
+                        loadUserProfile(null);
                     }
                 });
             } catch (err) {
@@ -900,6 +904,7 @@
                 APP.currentUser = result.user;
                 dom.authButtonText.innerText = result.user.displayName || "已登入";
                 dom.sidebarUserEmail.innerText = result.user.email;
+                await loadUserProfile(result.user);
                 loadHistoryFromCloud();
                 alertUserModalCustom(`歡迎回來，${result.user.displayName || 'Google 用戶'}！運動紀錄已同步至雲端。`);
             } catch (e) {
@@ -931,6 +936,78 @@
                 await addDoc(colRef, record);
             } catch (e) {
                 console.warn("Cloud save error:", e);
+            }
+        }
+
+        function profileStorageKey(user) {
+            return user?.uid ? `calories-gps-profile-${user.uid}` : 'calories-gps-profile-guest';
+        }
+
+        function applyUserProfile(profile) {
+            if (!profile) return;
+            APP.user.weight = Number(profile.weightKg) || 60;
+            APP.user.height = Number(profile.heightCm) || 170;
+            APP.user.age = Number(profile.age) || 25;
+            APP.user.gender = profile.gender === 'F' ? 'F' : 'M';
+
+            dom.inputWeight.value = APP.user.weight;
+            dom.inputHeight.value = APP.user.height;
+            dom.inputAge.value = APP.user.age;
+            document.querySelectorAll('.gender-btn').forEach(btn => {
+                const selected = btn.dataset.gender === APP.user.gender;
+                btn.classList.toggle('border-emerald-500', selected);
+                btn.classList.toggle('bg-emerald-500/20', selected);
+                btn.classList.toggle('text-emerald-300', selected);
+                btn.classList.toggle('border-slate-700', !selected);
+                btn.classList.toggle('bg-slate-800', !selected);
+                btn.classList.toggle('text-slate-400', !selected);
+            });
+            dom.summaryUserInfo.innerText = `體重: ${APP.user.weight}kg | 身高: ${APP.user.height}cm | ${APP.user.age}歲`;
+        }
+
+        async function loadUserProfile(user) {
+            const storageKey = profileStorageKey(user);
+            let profile = null;
+            try {
+                profile = JSON.parse(localStorage.getItem(storageKey) || 'null');
+            } catch (e) {
+                console.warn('Local profile load error:', e);
+            }
+
+            if (user && db) {
+                try {
+                    const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'body');
+                    const snapshot = await getDoc(profileRef);
+                    if (snapshot.exists()) profile = snapshot.data();
+                } catch (e) {
+                    console.warn('Cloud profile load error:', e);
+                }
+            }
+
+            if (profile) {
+                applyUserProfile(profile);
+                localStorage.setItem(storageKey, JSON.stringify(profile));
+            }
+        }
+
+        async function saveUserProfile() {
+            const profile = {
+                weightKg: APP.user.weight,
+                heightCm: APP.user.height,
+                age: APP.user.age,
+                gender: APP.user.gender,
+                updatedAt: new Date().toISOString()
+            };
+            const storageKey = profileStorageKey(APP.currentUser);
+            localStorage.setItem(storageKey, JSON.stringify(profile));
+
+            if (!db || !auth || !auth.currentUser) return;
+            try {
+                const profileRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'profile', 'body');
+                await setDoc(profileRef, profile, { merge: true });
+            } catch (e) {
+                console.warn('Cloud profile save error:', e);
+                alertUserModalCustom('體態已儲存在本機，但雲端同步失敗，請稍後再試。');
             }
         }
 
@@ -1983,6 +2060,15 @@
 
         dom.btnOpenUserModal.addEventListener('click', () => {
             dom.inputWeight.value = APP.user.weight; dom.inputHeight.value = APP.user.height; dom.inputAge.value = APP.user.age;
+            document.querySelectorAll('.gender-btn').forEach(btn => {
+                const selected = btn.dataset.gender === APP.user.gender;
+                btn.classList.toggle('border-emerald-500', selected);
+                btn.classList.toggle('bg-emerald-500/20', selected);
+                btn.classList.toggle('text-emerald-300', selected);
+                btn.classList.toggle('border-slate-700', !selected);
+                btn.classList.toggle('bg-slate-800', !selected);
+                btn.classList.toggle('text-slate-400', !selected);
+            });
             dom.userModal.classList.remove('hidden');
         });
         dom.btnCloseUserModal.addEventListener('click', () => dom.userModal.classList.add('hidden'));
@@ -1995,11 +2081,12 @@
             });
         });
 
-        dom.btnSaveUserModal.addEventListener('click', () => {
+        dom.btnSaveUserModal.addEventListener('click', async () => {
             APP.user.weight = parseFloat(dom.inputWeight.value) || 60;
             APP.user.height = parseFloat(dom.inputHeight.value) || 170;
             APP.user.age = parseInt(dom.inputAge.value) || 25;
             dom.summaryUserInfo.innerText = `體重: ${APP.user.weight}kg | 身高: ${APP.user.height}cm | ${APP.user.age}歲`;
+            await saveUserProfile();
             dom.userModal.classList.add('hidden');
         });
 
