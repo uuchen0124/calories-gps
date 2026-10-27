@@ -94,6 +94,22 @@
             filter: drop-shadow(0 4px 8px rgba(2, 6, 23, .4));
             touch-action: manipulation;
         }
+        .forest-plants-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            align-content: flex-end;
+            gap: 0.15rem;
+            min-height: 88px;
+            margin-top: auto;
+            padding-top: 0.5rem;
+        }
+        .forest-plant-instance {
+            height: 78px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between select-none overflow-x-hidden">
@@ -1542,9 +1558,9 @@
                 const plants = data?.plants?.[landNumber] || {};
                 const plantTotal = Object.values(plants).reduce((sum, counts) => sum + Object.values(counts || {}).reduce((subtotal, count) => subtotal + Number(count || 0), 0), 0);
                 const entries = Object.entries(FOREST_PLANTS).flatMap(([type, info]) => Object.entries(plants[type] || {}).map(([uid, count]) => ({ type, info, uid, count })));
-                const plantHtml = entries.length ? entries.flatMap(item => Array.from({ length: Number(item.count || 0) }, (_, plantIndex) => `<div class="flex flex-col items-center justify-end" title="${item.info.name}" style="transform:translateY(${(plantIndex * 7 + item.uid.length) % 13 - 6}px) rotate(${(plantIndex * 11 + item.uid.length) % 17 - 8}deg)">${forestSpriteHtml(item.type, item.info, 54, item.uid)}</div>`)).join('') : '<span class="text-xs text-slate-500">尚未種植</span>';
+                const plantHtml = entries.length ? entries.flatMap(item => Array.from({ length: Number(item.count || 0) }, (_, plantIndex) => `<div class="forest-plant-instance" title="${item.info.name}" style="margin-left:${(plantIndex * 13 + item.uid.length) % 9}px;transform:rotate(${(plantIndex * 11 + item.uid.length) % 17 - 8}deg)">${forestSpriteHtml(item.type, item.info, 58, item.uid)}</div>`)).join('') : '<span class="text-xs text-slate-500">尚未種植</span>';
                 const background = `linear-gradient(rgba(5, 15, 18, .48), rgba(5, 15, 18, .62)), url('${landInfo.image}')`;
-                return `<article class="${unlocked ? 'border-lime-500/40' : 'border-slate-700 opacity-70'} border rounded-2xl p-4 min-h-44 bg-cover bg-center overflow-hidden" style="background-image:${background};background-position:${landInfo.position}"><div class="flex items-center justify-between gap-2"><h3 class="text-sm font-bold ${unlocked ? 'text-lime-100' : 'text-slate-300'} drop-shadow">土地 ${landNumber} · ${landInfo.name}</h3><span class="text-[10px] ${unlocked ? 'text-emerald-200' : 'text-slate-300'} bg-slate-950/55 rounded-full px-2 py-1">${unlocked ? `${plantTotal} / 20 株` : '完成前一片土地後解鎖'}</span></div><div class="flex items-end gap-3 mt-4 min-h-16">${unlocked ? plantHtml : '<i class="fa-solid fa-lock text-slate-200/70 text-2xl"></i>'}</div></article>`;
+                return `<article class="${unlocked ? 'border-lime-500/40' : 'border-slate-700 opacity-70'} border rounded-2xl p-4 min-h-44 bg-cover bg-center overflow-hidden flex flex-col" style="background-image:${background};background-position:${landInfo.position}"><div class="flex items-center justify-between gap-2"><h3 class="text-sm font-bold ${unlocked ? 'text-lime-100' : 'text-slate-300'} drop-shadow">土地 ${landNumber} · ${landInfo.name}</h3><span class="text-[10px] ${unlocked ? 'text-emerald-200' : 'text-slate-300'} bg-slate-950/55 rounded-full px-2 py-1">${unlocked ? `${plantTotal} / 20 株` : '完成前一片土地後解鎖'}</span></div><div class="forest-plants-row">${unlocked ? plantHtml : '<i class="fa-solid fa-lock text-slate-200/70 text-2xl"></i>'}</div></article>`;
             }).join('');
         }
 
