@@ -1565,13 +1565,33 @@
             APP.forestInvites = [];
             if (!db || !user || user.isAnonymous) return;
             try {
-                const snapshot = await getDocs(query(collection(db, 'artifacts', appId, 'forests'), where('invites', 'array-contains', user.uid)));
-                APP.forestInvites = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+                const inbox = await getDocs(collection(db, 'artifacts', appId, 'users', user.uid, 'forestInvites'));
+                const invites = new Map(inbox.docs.map(item => [item.id, { id: item.id, ...item.data() }]));
+                try {
+                    const legacy = await getDocs(query(collection(db, 'artifacts', appId, 'forests'), where('invites', 'array-contains', user.uid)));
+                    legacy.docs.forEach(item => { if (!invites.has(item.id)) invites.set(item.id, { id: item.id, ...item.data() }); });
+                } catch (legacyError) {
+                    console.warn('Legacy forest invite load error:', legacyError);
+                }
+                APP.forestInvites = [...invites.values()];
             } catch (error) {
                 console.warn('Forest invite load error:', error);
                 dom.forestStatus.innerText = '森林邀請讀取失敗，請確認 Firebase 規則已更新。';
             }
             dom.forestInviteDot.classList.toggle('hidden', APP.forestInvites.length === 0);
+        }
+
+        async function writeForestInvite(forestId, forestData, friendUid) {
+            const user = auth?.currentUser;
+            if (!db || !user || !friendUid) return;
+            await setDoc(doc(db, 'artifacts', appId, 'users', friendUid, 'forestInvites', forestId), {
+                forestId,
+                fromUid: user.uid,
+                toUid: friendUid,
+                name: forestData.name || '好友森林',
+                members: forestData.members || [],
+                createdAt: new Date().toISOString()
+            }, { merge: true });
         }
 
         async function loadMyForests() {
@@ -1747,6 +1767,7 @@
             data.id = forestId;
             if (invitedUid) data.invites = [invitedUid];
             await setDoc(doc(db, 'artifacts', appId, 'forests', forestId), data);
+            if (invitedUid) await writeForestInvite(forestId, data, invitedUid);
             dom.forestCreateModal.classList.add('hidden');
             dom.forestCreateModal.classList.remove('flex');
             dom.forestCreateName.value = '';
@@ -1764,6 +1785,7 @@
             data.invites = [...(data.invites || []), friendUid];
             data.updatedAt = new Date().toISOString();
             await setDoc(doc(db, 'artifacts', appId, 'forests', APP.forestId), data, { merge: true });
+            await writeForestInvite(APP.forestId, data, friendUid);
             dom.forestStatus.innerText = '森林邀請已送出。';
             dom.forestMemberInvitePanel.classList.add('hidden');
         }
@@ -1780,9 +1802,12 @@
             if (!user || !invite) return;
             const name = window.prompt('請為加入的森林命名', invite.name || '好友森林');
             if (name === null) return;
-            const data = { ...invite, members: [...new Set([...(invite.members || []), user.uid])], invites: (invite.invites || []).filter(uid => uid !== user.uid), memberNames: { ...(invite.memberNames || {}), [user.uid]: name.trim().slice(0, 30) || '好友森林' }, updatedAt: new Date().toISOString() };
-            delete data.id;
+            const forestSnapshot = await getDoc(doc(db, 'artifacts', appId, 'forests', forestId));
+            if (!forestSnapshot.exists()) return;
+            const forest = forestSnapshot.data();
+            const data = { ...forest, members: [...new Set([...(forest.members || []), user.uid])], invites: (forest.invites || []).filter(uid => uid !== user.uid), memberNames: { ...(forest.memberNames || {}), [user.uid]: name.trim().slice(0, 30) || '好友森林' }, updatedAt: new Date().toISOString() };
             await setDoc(doc(db, 'artifacts', appId, 'forests', forestId), data, { merge: true });
+            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'forestInvites', forestId));
             await loadForestView();
             dom.forestInvitesModal.classList.add('hidden');
             dom.forestInvitesModal.classList.remove('flex');
@@ -1792,7 +1817,12 @@
             const invite = APP.forestInvites.find(item => item.id === forestId);
             const user = auth?.currentUser;
             if (!invite || !user) return;
-            await setDoc(doc(db, 'artifacts', appId, 'forests', forestId), { invites: (invite.invites || []).filter(uid => uid !== user.uid), updatedAt: new Date().toISOString() }, { merge: true });
+            const forestSnapshot = await getDoc(doc(db, 'artifacts', appId, 'forests', forestId));
+            if (forestSnapshot.exists()) {
+                const forest = forestSnapshot.data();
+                await setDoc(doc(db, 'artifacts', appId, 'forests', forestId), { invites: (forest.invites || []).filter(uid => uid !== user.uid), updatedAt: new Date().toISOString() }, { merge: true });
+            }
+            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'forestInvites', forestId));
             await loadForestView();
             renderForestInvites();
         }
