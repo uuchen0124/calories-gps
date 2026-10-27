@@ -37,6 +37,7 @@
     <!-- Leaflet.js (免 API 地圖引擎 + 純 OpenStreetMap) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.js"></script>
 
     <style>
         body {
@@ -243,6 +244,50 @@
                     <span class="text-[10px] bg-rose-800 px-2 py-0.5 rounded font-mono shrink-0">防弊啟動</span>
                 </div>
             </section>
+
+            <!-- 運動規劃 -->
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/80 shadow-md space-y-3">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input id="enableCaloriePlanning" type="checkbox" class="mt-1 h-4 w-4 accent-emerald-400">
+                        <span><strong class="text-sm text-white"><i class="fa-solid fa-fire text-amber-400 mr-1"></i>目標卡路里規劃</strong><br><small class="text-[10px] text-slate-400">依體重與運動強度估算需要的時間／距離</small></span>
+                    </label>
+                    <div id="caloriePlanningFields" class="space-y-2 opacity-60 pointer-events-none">
+                        <label class="block text-[11px] text-slate-400">目標消耗卡路里（kcal）
+                            <input id="targetCalories" type="number" min="10" step="10" value="300" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500">
+                        </label>
+                        <label class="block text-[11px] text-slate-400">運動強度
+                            <select id="calorieActivityLevel" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
+                                <option value="3.5">慢走（約 4 km/h）</option><option value="5.5" selected>快走（約 6 km/h）</option><option value="8.2">慢跑（約 8 km/h）</option><option value="12">跑步（約 12 km/h）</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="shadePlanningCard" class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/80 shadow-md space-y-3">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input id="enableShadePlanning" type="checkbox" class="mt-1 h-4 w-4 accent-sky-400">
+                        <span><strong class="text-sm text-white"><i class="fa-solid fa-umbrella text-sky-400 mr-1"></i>遮陰路線規劃</strong><br><small class="text-[10px] text-slate-400">依道路、建築物與陽光比例尋找往返路線</small></span>
+                    </label>
+                    <div id="nightShadeMessage" class="hidden rounded-xl bg-slate-950/70 border border-slate-700 px-3 py-2 text-[11px] text-slate-400">夜間不適用此功能哦！</div>
+                    <div id="shadePlanningFields" class="space-y-2 opacity-60 pointer-events-none">
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="text-[11px] text-slate-400">目標類型<select id="routePlanGoalType" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"><option value="duration">運動時間（分鐘）</option><option value="distance">目標距離（公里）</option></select></label>
+                            <label class="text-[11px] text-slate-400">目標數值<input id="routePlanGoalValue" type="number" min="0.5" step="0.5" value="20" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono"></label>
+                        </div>
+                        <label class="block text-[11px] text-slate-400">預計開始時間<input id="routePlanStartTime" type="datetime-local" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono"></label>
+                        <label class="block text-[11px] text-slate-400">希望路線受到陽光比例：<b id="sunRatioValue" class="text-amber-300">15%</b>
+                            <input id="sunRatio" type="range" min="0" max="100" value="15" class="mt-2 w-full accent-amber-400"><span class="text-[10px] text-slate-500">0% = 優先遮陰，100% = 優先日照。15 分鐘為可調整的參考值。</span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+            <section class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/80 shadow-md space-y-2">
+                <div class="flex flex-col sm:flex-row gap-2"><button id="btnPlanShadeRoute" class="flex-1 px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition flex items-center justify-center gap-2"><i class="fa-solid fa-route"></i><span>開始規劃路線</span></button><button id="btnClearShadeRoute" class="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 transition">清除規劃</button></div>
+                <p id="daylightStatus" class="text-[10px] text-slate-400">正在取得今日日出、日落時間…</p>
+                <p id="shadeRouteStatus" class="text-[10px] text-slate-400 min-h-4">請至少勾選一項規劃。</p><div id="shadeRouteSummary" class="hidden bg-slate-900/80 border border-sky-500/30 rounded-xl p-3 text-[11px] text-slate-300"></div>
+            </section>
+            <div id="planConflictModal" class="hidden fixed inset-0 z-[1000] bg-slate-950/70 backdrop-blur-sm items-center justify-center p-4"><div class="w-full max-w-md bg-slate-800 border border-slate-600 rounded-2xl p-5 shadow-2xl"><h3 class="text-base font-bold text-white">運動目標需要確認</h3><p id="planConflictText" class="text-sm text-slate-300 mt-3"></p><div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-5"><button id="btnChooseCalorieTarget" class="px-3 py-3 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">依目標卡路里設計</button><button id="btnChooseRouteTarget" class="px-3 py-3 rounded-xl bg-sky-500 text-slate-950 font-bold text-xs">依目前時間／距離設計</button><button id="btnAdjustPlan" class="px-3 py-3 rounded-xl bg-slate-700 text-slate-200 font-bold text-xs border border-slate-600">返回重新調整我的數據</button></div></div></div>
 
             <!-- 控制列 -->
             <section class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-800/80 p-3 rounded-2xl border border-slate-800">
@@ -473,7 +518,7 @@
     <!-- Firebase SDK 導入 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // 諾華健康諮詢中心 / 衛福部食品營養成分資料庫 (每100公克)
@@ -742,6 +787,29 @@
             btnCloseRouteMapModal: document.getElementById('btnCloseRouteMapModal'),
             btnCloseRouteMapModal2: document.getElementById('btnCloseRouteMapModal2'),
             historyRouteMap: document.getElementById('historyRouteMap')
+            ,routePlanGoalType: document.getElementById('routePlanGoalType')
+            ,routePlanGoalValue: document.getElementById('routePlanGoalValue')
+            ,routePlanStartTime: document.getElementById('routePlanStartTime')
+            ,btnPlanShadeRoute: document.getElementById('btnPlanShadeRoute')
+            ,btnClearShadeRoute: document.getElementById('btnClearShadeRoute')
+            ,shadeRouteStatus: document.getElementById('shadeRouteStatus')
+            ,shadeRouteSummary: document.getElementById('shadeRouteSummary')
+            ,enableCaloriePlanning: document.getElementById('enableCaloriePlanning')
+            ,caloriePlanningFields: document.getElementById('caloriePlanningFields')
+            ,targetCalories: document.getElementById('targetCalories')
+            ,calorieActivityLevel: document.getElementById('calorieActivityLevel')
+            ,enableShadePlanning: document.getElementById('enableShadePlanning')
+            ,shadePlanningCard: document.getElementById('shadePlanningCard')
+            ,shadePlanningFields: document.getElementById('shadePlanningFields')
+            ,nightShadeMessage: document.getElementById('nightShadeMessage')
+            ,daylightStatus: document.getElementById('daylightStatus')
+            ,sunRatio: document.getElementById('sunRatio')
+            ,sunRatioValue: document.getElementById('sunRatioValue')
+            ,planConflictModal: document.getElementById('planConflictModal')
+            ,planConflictText: document.getElementById('planConflictText')
+            ,btnChooseCalorieTarget: document.getElementById('btnChooseCalorieTarget')
+            ,btnChooseRouteTarget: document.getElementById('btnChooseRouteTarget')
+            ,btnAdjustPlan: document.getElementById('btnAdjustPlan')
         };
 
         let map = null;
@@ -749,42 +817,51 @@
         let actualTrackPolyline = null;
         let historyRouteMapInstance = null;
         let historyRoutePolyline = null;
+        let plannedRouteLayer = null;
+        let daylightCache = null;
+        let pendingPlan = null;
+        const routeCache = new Map();
 
         // Firebase 初始化與設定
         let db = null;
         let auth = null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'yuyu-calorie-gps-v2';
+        const appId = 'calories-gps';
+        const firebaseConfig = {
+            apiKey: 'AIzaSyBeB6se3NysEUVqCTqQkfAmDVVlcr0ngp4',
+            authDomain: 'calories-gps.firebaseapp.com',
+            projectId: 'calories-gps',
+            storageBucket: 'calories-gps.firebasestorage.app',
+            messagingSenderId: '68178639323',
+            appId: '1:68178639323:web:d6724004d886c2e7f30ffe'
+        };
 
         async function initFirebase() {
             try {
-                if (typeof __firebase_config !== 'undefined') {
-                    const firebaseConfig = JSON.parse(__firebase_config);
-                    const app = initializeApp(firebaseConfig);
-                    db = getFirestore(app);
-                    auth = getAuth(app);
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
 
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-
-                    onAuthStateChanged(auth, (user) => {
-                        if (user) {
-                            APP.currentUser = user;
-                            if (user.isAnonymous) {
-                                dom.authButtonText.innerText = "訪客登入中";
-                                dom.sidebarUserEmail.innerText = "訪客模式 (本機儲存)";
-                            } else {
-                                dom.authButtonText.innerText = user.displayName || user.email || "已登入";
-                                dom.sidebarUserEmail.innerText = user.email || user.uid;
-                            }
-                            loadHistoryFromCloud();
-                        }
-                    });
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
                 }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        APP.currentUser = user;
+                        if (user.isAnonymous) {
+                            dom.authButtonText.innerText = "訪客登入中";
+                            dom.sidebarUserEmail.innerText = "訪客模式 (尚未同步 Google 帳號)";
+                        } else {
+                            dom.authButtonText.innerText = user.displayName || user.email || "已登入";
+                            dom.sidebarUserEmail.innerText = user.email || user.uid;
+                        }
+                        loadHistoryFromCloud();
+                    }
+                });
             } catch (err) {
                 console.warn("Firebase init fallback:", err);
+                dom.authButtonText.innerText = "Firebase 未連線";
+                dom.sidebarUserEmail.innerText = "請確認 Firebase 設定與網域授權";
             }
         }
 
@@ -803,7 +880,20 @@
                 loadHistoryFromCloud();
                 alertUserModalCustom(`歡迎回來，${result.user.displayName || 'Google 用戶'}！運動紀錄已同步至雲端。`);
             } catch (e) {
-                console.warn("Google Signin error:", e);
+                const errorCode = e?.code || 'unknown-error';
+                const errorMessages = {
+                    'auth/unauthorized-domain': '目前網址尚未加入 Firebase 授權網域。',
+                    'auth/operation-not-allowed': 'Firebase 尚未啟用 Google 登入。',
+                    'auth/popup-blocked': '瀏覽器封鎖了登入彈窗，請允許此網站開啟彈窗。',
+                    'auth/popup-closed-by-user': '登入視窗被關閉，請重新按一次登入。',
+                    'auth/cancelled-popup-request': '登入視窗請求被取消，請重新按一次登入。',
+                    'auth/network-request-failed': '網路連線失敗，請確認目前可以連上網路。'
+                };
+                const message = errorMessages[errorCode] || 'Google 登入失敗，請檢查 Firebase 設定。';
+                dom.authButtonText.innerText = '登入失敗';
+                dom.sidebarUserEmail.innerText = `${message} (${errorCode})`;
+                console.error('Google Signin error:', e);
+                alert(`${message}\n錯誤代碼：${errorCode}`);
             }
         });
 
@@ -940,6 +1030,297 @@
                     },
                     { enableHighAccuracy: true, timeout: 6000 }
                 );
+            }
+        }
+
+        function setDefaultPlannerTime() {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            dom.routePlanStartTime.value = now.toISOString().slice(0, 16);
+        }
+
+        function updatePlanningFields() {
+            const calorieOn = dom.enableCaloriePlanning.checked;
+            const shadeOn = dom.enableShadePlanning.checked && !daylightCache?.isNight;
+            dom.caloriePlanningFields.classList.toggle('opacity-60', !calorieOn);
+            dom.caloriePlanningFields.classList.toggle('pointer-events-none', !calorieOn);
+            dom.shadePlanningFields.classList.toggle('opacity-60', !shadeOn);
+            dom.shadePlanningFields.classList.toggle('pointer-events-none', !shadeOn);
+            dom.enableShadePlanning.disabled = Boolean(daylightCache?.isNight);
+            dom.shadePlanningCard.classList.toggle('opacity-50', Boolean(daylightCache?.isNight));
+        }
+
+        async function fetchDaylightWindow(origin) {
+            const selected = new Date(dom.routePlanStartTime.value || Date.now());
+            const date = `${selected.getFullYear()}-${String(selected.getMonth() + 1).padStart(2, '0')}-${String(selected.getDate()).padStart(2, '0')}`;
+            const cacheKey = `${origin.lat.toFixed(3)},${origin.lon.toFixed(3)},${date}`;
+            if (daylightCache?.key === cacheKey) return daylightCache;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${origin.lat}&longitude=${origin.lon}&daily=sunrise,sunset&timezone=auto&forecast_days=1&start_date=${date}&end_date=${date}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('日出日落資料暫時無法取得');
+            const data = await response.json();
+            const sunrise = new Date(data.daily.sunrise[0]);
+            const sunset = new Date(data.daily.sunset[0]);
+            const isNight = selected < sunrise || selected >= sunset;
+            daylightCache = { key: cacheKey, sunrise, sunset, isNight, timezone: data.timezone };
+            dom.daylightStatus.innerText = `${isNight ? '目前為夜間' : '目前為日間'}｜日出 ${sunrise.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}・日落 ${sunset.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}（Open-Meteo 每日資料）`;
+            dom.nightShadeMessage.classList.toggle('hidden', !isNight);
+            if (isNight) dom.enableShadePlanning.checked = false;
+            updatePlanningFields();
+            return daylightCache;
+        }
+
+        function estimatedCalories(minutes, met = parseFloat(dom.calorieActivityLevel.value)) {
+            return met * 3.5 * APP.user.weight / 200 * minutes;
+        }
+
+        function showPlanConflict(message, plan) {
+            pendingPlan = plan;
+            dom.planConflictText.innerText = message;
+            dom.planConflictModal.classList.remove('hidden');
+            dom.planConflictModal.classList.add('flex');
+        }
+
+        function closePlanConflict() {
+            pendingPlan = null;
+            dom.planConflictModal.classList.add('hidden');
+            dom.planConflictModal.classList.remove('flex');
+        }
+
+        function plannerStartPoint() {
+            if (!userMarker) return null;
+            const point = userMarker.getLatLng();
+            return { lat: point.lat, lon: point.lng };
+        }
+
+        function destinationPoint(origin, distanceMeters, bearingDegrees) {
+            const radius = 6371000;
+            const bearing = bearingDegrees * Math.PI / 180;
+            const lat1 = origin.lat * Math.PI / 180;
+            const lon1 = origin.lon * Math.PI / 180;
+            const angularDistance = distanceMeters / radius;
+            const lat2 = Math.asin(Math.sin(lat1) * Math.cos(angularDistance) + Math.cos(lat1) * Math.sin(angularDistance) * Math.cos(bearing));
+            const lon2 = lon1 + Math.atan2(Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(lat1), Math.cos(angularDistance) - Math.sin(lat1) * Math.sin(lat2));
+            return [lon2 * 180 / Math.PI, lat2 * 180 / Math.PI];
+        }
+
+        async function requestRoadRoute(coordinates) {
+            const coordinateString = coordinates.map(([lon, lat]) => `${lon},${lat}`).join(';');
+            const cacheKey = coordinates.map(([lon, lat]) => `${lon.toFixed(5)},${lat.toFixed(5)}`).join(';');
+            if (routeCache.has(cacheKey)) return routeCache.get(cacheKey);
+            const url = `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${coordinateString}?overview=full&geometries=geojson&steps=false`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('道路路由服務暫時無法使用');
+            const data = await response.json();
+            if (data.code !== 'Ok' || !data.routes?.length) throw new Error('找不到可連回起點的道路');
+            routeCache.set(cacheKey, data.routes[0]);
+            return data.routes[0];
+        }
+
+        function routeBounds(routeCoordinates) {
+            const lats = routeCoordinates.map(point => point[1]);
+            const lons = routeCoordinates.map(point => point[0]);
+            const padding = 0.0025;
+            return {
+                south: Math.min(...lats) - padding,
+                west: Math.min(...lons) - padding,
+                north: Math.max(...lats) + padding,
+                east: Math.max(...lons) + padding
+            };
+        }
+
+        async function fetchBuildings(bounds) {
+            const query = `[out:json][timeout:25];way["building"](${bounds.south},${bounds.west},${bounds.north},${bounds.east});out tags geom;`;
+            const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('建築物資料服務暫時無法使用');
+            const data = await response.json();
+            return data.elements.filter(element => element.geometry && element.geometry.length >= 3).map(element => ({
+                geometry: element.geometry.map(point => ({ lat: point.lat, lon: point.lon })),
+                height: parseBuildingHeight(element.tags || {})
+            }));
+        }
+
+        function parseBuildingHeight(tags) {
+            const height = parseFloat(String(tags.height || '').replace(/[^0-9.]/g, ''));
+            if (Number.isFinite(height) && height > 0) return Math.min(height, 120);
+            const levels = parseFloat(String(tags['building:levels'] || '').replace(/[^0-9.]/g, ''));
+            if (Number.isFinite(levels) && levels > 0) return Math.min(levels * 3.2, 120);
+            return 8;
+        }
+
+        function localMeters(point, origin) {
+            const latScale = 111320;
+            const lonScale = 111320 * Math.cos(origin.lat * Math.PI / 180);
+            return { x: (point.lon - origin.lon) * lonScale, y: (point.lat - origin.lat) * latScale };
+        }
+
+        function crossProduct(a, b, c) {
+            return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+        }
+
+        function convexHull(points) {
+            const sorted = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+            if (sorted.length <= 3) return sorted;
+            const lower = [];
+            for (const point of sorted) {
+                while (lower.length >= 2 && crossProduct(lower[lower.length - 2], lower[lower.length - 1], point) <= 0) lower.pop();
+                lower.push(point);
+            }
+            const upper = [];
+            for (const point of [...sorted].reverse()) {
+                while (upper.length >= 2 && crossProduct(upper[upper.length - 2], upper[upper.length - 1], point) <= 0) upper.pop();
+                upper.push(point);
+            }
+            return lower.slice(0, -1).concat(upper.slice(0, -1));
+        }
+
+        function pointInPolygon(point, polygon) {
+            let inside = false;
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i].x, yi = polygon[i].y;
+                const xj = polygon[j].x, yj = polygon[j].y;
+                const intersects = ((yi > point.y) !== (yj > point.y)) && point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi;
+                if (intersects) inside = !inside;
+            }
+            return inside;
+        }
+
+        function buildShadowPolygons(buildings, routeOrigin, date) {
+            const sun = SunCalc.getPosition(date, routeOrigin.lat, routeOrigin.lon);
+            if (sun.altitude <= 0.05) return [];
+            const shadowLengthScale = 1 / Math.tan(sun.altitude);
+            const sunX = Math.sin(sun.azimuth);
+            const sunY = Math.cos(sun.azimuth);
+            return buildings.map(building => {
+                const footprint = building.geometry.map(point => localMeters(point, routeOrigin));
+                const shift = building.height * shadowLengthScale;
+                const shadow = footprint.map(point => ({ x: point.x - sunX * shift, y: point.y - sunY * shift }));
+                return convexHull([...footprint, ...shadow]);
+            });
+        }
+
+        function sampleRoute(routeCoordinates, spacingMeters = 25) {
+            const samples = [];
+            let carry = 0;
+            for (let index = 1; index < routeCoordinates.length; index++) {
+                const previous = routeCoordinates[index - 1];
+                const current = routeCoordinates[index];
+                const segmentDistance = calculateDistanceMeters(previous[1], previous[0], current[1], current[0]);
+                const steps = Math.max(1, Math.ceil((segmentDistance + carry) / spacingMeters));
+                for (let step = 0; step < steps; step++) {
+                    const ratio = Math.min(1, (step * spacingMeters + spacingMeters - carry) / segmentDistance);
+                    if (Number.isFinite(ratio) && ratio >= 0 && ratio <= 1) {
+                        samples.push([previous[0] + (current[0] - previous[0]) * ratio, previous[1] + (current[1] - previous[1]) * ratio]);
+                    }
+                }
+                carry = (carry + segmentDistance) % spacingMeters;
+            }
+            return samples.length ? samples : [routeCoordinates[0]];
+        }
+
+        function scoreShade(routeCoordinates, shadowPolygons, origin) {
+            const samples = sampleRoute(routeCoordinates);
+            let shaded = 0;
+            for (const sample of samples) {
+                const point = localMeters({ lat: sample[1], lon: sample[0] }, origin);
+                if (shadowPolygons.some(polygon => pointInPolygon(point, polygon))) shaded++;
+            }
+            const coverage = samples.length ? shaded / samples.length : 0;
+            return { coverage, sunlight: 1 - coverage, samples: samples.length };
+        }
+
+        function clearPlannedRoute() {
+            if (plannedRouteLayer) plannedRouteLayer.clearLayers();
+            dom.shadeRouteSummary.classList.add('hidden');
+        }
+
+        async function planShadeRoute(options = {}) {
+            const origin = plannerStartPoint();
+            if (!origin) { dom.shadeRouteStatus.innerText = '尚未取得目前位置，請先允許瀏覽器定位。'; return; }
+            try { await fetchDaylightWindow(origin); } catch (error) { dom.daylightStatus.innerText = error.message; }
+            const shadeEnabled = dom.enableShadePlanning.checked && !daylightCache?.isNight;
+            const calorieEnabled = dom.enableCaloriePlanning.checked;
+            if (!calorieEnabled && !shadeEnabled) { dom.shadeRouteStatus.innerText = '請至少勾選一項規劃；夜間無法使用遮陰規劃。'; return; }
+            const selectedValue = parseFloat(dom.routePlanGoalValue.value);
+            const selectedGoalType = dom.routePlanGoalType.value;
+            const met = parseFloat(dom.calorieActivityLevel.value);
+            const targetKcal = parseFloat(dom.targetCalories.value);
+            const routeMinutes = selectedGoalType === 'duration' ? selectedValue : selectedValue / 5 * 60;
+            const routeKcal = estimatedCalories(routeMinutes, met);
+            if (!Number.isFinite(selectedValue) || selectedValue <= 0 || (calorieEnabled && (!Number.isFinite(targetKcal) || targetKcal <= 0))) { dom.shadeRouteStatus.innerText = '請輸入大於 0 的目標時間、距離與卡路里。'; return; }
+            let goalType = calorieEnabled ? 'duration' : selectedGoalType;
+            let value = calorieEnabled ? targetKcal / (met * 3.5 * APP.user.weight / 200) : selectedValue;
+            if (calorieEnabled && shadeEnabled && !options.override && targetKcal > routeKcal * 1.1) {
+                showPlanConflict(`你所選的${selectedGoalType === 'duration' ? `${selectedValue} 分鐘` : `${selectedValue} 公里`}約只能消耗 ${Math.round(routeKcal)} 大卡，但目標是 ${Math.round(targetKcal)} 大卡。請選擇要依哪個目標設計路線。`, { targetKcal, routeKcal });
+                return;
+            }
+            if (calorieEnabled && shadeEnabled && options.override === 'route') { goalType = selectedGoalType; value = selectedValue; }
+            const calorieMode = calorieEnabled && options.override !== 'route';
+            const targetMeters = calorieMode
+                ? (value / 60) * 5 * 1000
+                : (goalType === 'duration' ? value / 60 * 6 * 1000 : value * 1000);
+            const targetSeconds = goalType === 'duration' ? value * 60 : targetMeters / (5 * 1000 / 3600);
+            const startTime = new Date(dom.routePlanStartTime.value || Date.now());
+            const baseRadius = Math.max(180, targetMeters / (2 * Math.PI));
+            dom.btnPlanShadeRoute.disabled = true;
+            dom.shadeRouteStatus.innerText = '正在查詢道路候選路線…';
+            clearPlannedRoute();
+            try {
+                const candidates = [];
+                const scales = [0.45, 0.7, 1.0, 1.35, 1.7];
+                const routeRequests = scales.map((scale, index) => {
+                    const rotation = index * 72;
+                    const waypointBearings = targetMeters < 1800 ? [rotation, rotation + 180] : [rotation, rotation + 120, rotation + 240];
+                    const waypoints = waypointBearings.map(bearing => destinationPoint(origin, baseRadius * scale, bearing));
+                    return [[origin.lon, origin.lat], ...waypoints, [origin.lon, origin.lat]];
+                });
+                for (let index = 0; index < routeRequests.length; index += 2) {
+                    const batch = routeRequests.slice(index, index + 2);
+                    const routes = await Promise.all(batch.map(requestRoadRoute));
+                    candidates.push(...routes);
+                    if (index + 2 < routeRequests.length) await new Promise(resolve => setTimeout(resolve, shadeEnabled ? 350 : 200));
+                }
+                const allCoordinates = candidates.flatMap(route => route.geometry.coordinates);
+                dom.shadeRouteStatus.innerText = '正在讀取建築物並估算指定時間的陰影…';
+                const buildings = shadeEnabled ? await fetchBuildings(routeBounds(allCoordinates)) : [];
+                const shadows = shadeEnabled ? buildShadowPolygons(buildings, origin, startTime) : [];
+                const scored = candidates.map(route => ({
+                    route,
+                    shade: shadeEnabled ? scoreShade(route.geometry.coordinates, shadows, origin) : { coverage: 0, sunlight: 1 },
+                    fitError: goalType === 'duration'
+                        ? Math.abs(route.duration - targetSeconds)
+                        : Math.abs(route.distance - targetMeters)
+                }));
+                const fitTolerance = calorieMode
+                    ? Math.max(60, targetSeconds * 0.12)
+                    : goalType === 'duration'
+                    ? Math.max(120, targetSeconds * 0.35)
+                    : Math.max(300, targetMeters * 0.3);
+                const fittingRoutes = scored.filter(candidate => candidate.fitError <= fitTolerance);
+                const desiredSun = shadeEnabled ? parseFloat(dom.sunRatio.value) / 100 : 1;
+                const rankedRoutes = (fittingRoutes.length ? fittingRoutes : scored).sort((a, b) => {
+                    if (calorieMode && a.fitError !== b.fitError) return a.fitError - b.fitError;
+                    return Math.abs(a.shade.sunlight - desiredSun) - Math.abs(b.shade.sunlight - desiredSun) || a.fitError - b.fitError;
+                });
+                const best = rankedRoutes[0];
+                if (!plannedRouteLayer) plannedRouteLayer = L.layerGroup().addTo(map);
+                L.polyline(best.route.geometry.coordinates.map(point => [point[1], point[0]]), { color: '#38bdf8', weight: 6, opacity: 0.95 }).addTo(plannedRouteLayer);
+                L.circleMarker([origin.lat, origin.lon], { radius: 7, color: '#fff', weight: 2, fillColor: '#38bdf8', fillOpacity: 1 }).bindTooltip('出發／返回').addTo(plannedRouteLayer);
+                map.fitBounds(L.latLngBounds(best.route.geometry.coordinates.map(point => [point[1], point[0]])), { padding: [24, 24] });
+                const shadePercent = Math.round(best.shade.coverage * 100);
+                const sunPercent = Math.round(best.shade.sunlight * 100);
+                const calories = estimatedCalories(best.route.duration / 60, met);
+                const targetLabel = calorieEnabled ? `${Math.round(value * met * 3.5 * APP.user.weight / 200)} 大卡目標` : (goalType === 'duration' ? `${value} 分鐘目標` : `${value} 公里目標`);
+                dom.shadeRouteSummary.innerHTML = `<div class="flex items-center justify-between gap-3"><strong class="text-sky-300">建議路線完成</strong><span class="text-slate-400">${targetLabel}</span></div><div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2"><span>路線<br><b class="text-white">${(best.route.distance / 1000).toFixed(2)} km</b></span><span>預估時間<br><b class="text-white">${Math.round(best.route.duration / 60)} 分鐘</b></span><span>估算消耗<br><b class="text-amber-300">${Math.round(calories)} kcal</b></span><span>陰影／陽光<br><b class="text-emerald-300">${shadePercent}%／${sunPercent}%</b></span></div><p class="text-[10px] text-slate-500 mt-2">依 OSM 道路與建築物資料估算；建築高度缺值時使用一般樓層高度，實際陰影會受樹木、棚架與天氣影響。</p>`;
+                dom.shadeRouteSummary.classList.remove('hidden');
+                const fitMessage = fittingRoutes.length ? '符合目標範圍內' : '附近沒有完全符合的路線，已選最接近目標者';
+                dom.shadeRouteStatus.innerText = `已比較 ${candidates.length} 條道路往返候選路線，${fitMessage}再依${shadeEnabled ? '陽光／遮陰比例' : '目標卡路里'}選出藍線。`;
+            } catch (error) {
+                console.error('Shade route planning error:', error);
+                dom.shadeRouteStatus.innerText = error instanceof Error ? error.message : '路線規劃失敗，請稍後再試。';
+            } finally {
+                dom.btnPlanShadeRoute.disabled = false;
             }
         }
 
@@ -1392,9 +1773,36 @@
             clearCloudHistory();
         });
 
+        dom.btnPlanShadeRoute.addEventListener('click', () => {
+            planShadeRoute();
+        });
+
+        dom.btnClearShadeRoute.addEventListener('click', () => {
+            clearPlannedRoute();
+            dom.shadeRouteStatus.innerText = '已清除規劃路線。請重新輸入目標後再規劃。';
+        });
+
+        dom.enableCaloriePlanning.addEventListener('change', updatePlanningFields);
+        dom.enableShadePlanning.addEventListener('change', updatePlanningFields);
+        dom.sunRatio.addEventListener('input', () => { dom.sunRatioValue.innerText = `${dom.sunRatio.value}%`; });
+        dom.routePlanStartTime.addEventListener('change', async () => {
+            const origin = plannerStartPoint();
+            if (!origin) return;
+            try { await fetchDaylightWindow(origin); } catch (error) { dom.daylightStatus.innerText = error.message; }
+        });
+        dom.btnChooseCalorieTarget.addEventListener('click', () => { const plan = pendingPlan; closePlanConflict(); planShadeRoute({ override: 'calorie' }); });
+        dom.btnChooseRouteTarget.addEventListener('click', () => { const plan = pendingPlan; closePlanConflict(); planShadeRoute({ override: 'route' }); });
+        dom.btnAdjustPlan.addEventListener('click', closePlanConflict);
+
         window.onload = function() {
             initSidebar();
             initMap();
+            setDefaultPlannerTime();
+            updatePlanningFields();
+            setTimeout(async () => {
+                const origin = plannerStartPoint();
+                if (origin) { try { await fetchDaylightWindow(origin); } catch (error) { dom.daylightStatus.innerText = error.message; } }
+            }, 1200);
             initFirebase();
         };
     </script>
