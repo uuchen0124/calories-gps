@@ -1811,14 +1811,8 @@
             const durationHrs = APP.elapsedSeconds > 0 ? (APP.elapsedSeconds / 3600) : 0.0001;
             const avgSpeedKmh = distKm / durationHrs;
             const validPoints = APP.recordedPath.length;
-            let segments = 0;
-            let wasMoving = false;
-            for (const sample of APP.trackSamples) {
-                const isMoving = sample.met > 0 || sample.speedKmh >= 1;
-                if (isMoving && !wasMoving) segments++;
-                wasMoving = isMoving;
-            }
-            segments = Math.max(1, segments);
+            // 一次開始到結束的完整運動紀錄視為一段，避免 GPS 取樣中斷被誤算成多段。
+            const segments = validPoints > 0 ? 1 : 0;
 
             let straightDistKm = 0;
             if (APP.recordedPath.length >= 2) {
@@ -1917,7 +1911,12 @@
         }
 
         function getTrackSummary(metrics) {
-            if (metrics.trackFile?.summary) return metrics.trackFile.summary;
+            if (metrics.trackFile?.summary) {
+                return {
+                    ...metrics.trackFile.summary,
+                    segments: metrics.trackFile.summary.recordedPoints > 0 || metrics.trackFile.summary.distanceKm > 0 ? 1 : 0
+                };
+            }
             return {
                 distanceKm: Number(metrics.totalDistance || 0), durationTime: metrics.durationTime || '00:00',
                 averageSpeedKmh: Number(metrics.avgSpeed || 0), calories: Number(metrics.calories || 0),
