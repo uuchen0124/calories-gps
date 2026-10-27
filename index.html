@@ -467,6 +467,7 @@
                         <button id="btnCreateForest" class="px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold"><i class="fa-solid fa-plus mr-1"></i>建立新森林</button>
                         <button id="btnForestInvites" class="relative px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold"><i class="fa-solid fa-envelope mr-1"></i>森林邀請<span id="forestInviteDot" class="hidden absolute -right-1 -top-1 w-3 h-3 rounded-full bg-rose-500 border-2 border-slate-800"></span></button>
                         <select id="forestSelect" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs min-w-40"></select>
+                        <button id="btnRenameForest" class="px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold"><i class="fa-solid fa-pen mr-1"></i>更改名稱</button>
                         <button id="btnOpenForestExchange" class="px-3 py-2 rounded-xl bg-lime-400 hover:bg-lime-300 text-slate-950 text-xs font-bold"><i class="fa-solid fa-seedling mr-1"></i>對換植物</button>
                     </div>
                 </div>
@@ -1000,6 +1001,7 @@
             btnForestInvites: document.getElementById('btnForestInvites'),
             forestInviteDot: document.getElementById('forestInviteDot'),
             forestSelect: document.getElementById('forestSelect'),
+            btnRenameForest: document.getElementById('btnRenameForest'),
             btnOpenForestMemberInvite: document.getElementById('btnOpenForestMemberInvite'),
             forestMemberInvitePanel: document.getElementById('forestMemberInvitePanel'),
             forestMemberFriendSelect: document.getElementById('forestMemberFriendSelect'),
@@ -1638,6 +1640,34 @@
                 dom.forestStatus.innerText = '無法讀取這片森林，請稍後再試。';
             }
             renderForest();
+        }
+
+        async function renameCurrentForest() {
+            const user = auth?.currentUser;
+            if (!user || user.isAnonymous || !APP.forestId || !APP.forestData) {
+                dom.forestStatus.innerText = '請先建立或選擇森林。';
+                return;
+            }
+            const currentName = forestDisplayName(APP.forestData);
+            const name = window.prompt('請輸入新的森林名稱', currentName);
+            if (name === null) return;
+            const nextName = name.trim().slice(0, 30);
+            if (!nextName) {
+                dom.forestStatus.innerText = '森林名稱不能是空白。';
+                return;
+            }
+            APP.forestData.memberNames = { ...(APP.forestData.memberNames || {}), [user.uid]: nextName };
+            APP.forestData.updatedAt = new Date().toISOString();
+            await setDoc(doc(db, 'artifacts', appId, 'forests', APP.forestId), {
+                memberNames: APP.forestData.memberNames,
+                updatedAt: APP.forestData.updatedAt
+            }, { merge: true });
+            const selected = APP.forestList.find(item => item.id === APP.forestId);
+            if (selected) selected.memberNames = APP.forestData.memberNames;
+            renderForestSelect();
+            dom.forestSelect.value = APP.forestId;
+            renderForest();
+            dom.forestStatus.innerText = `森林名稱已更改為「${nextName}」。`;
         }
 
         async function loadForestView() {
@@ -3220,6 +3250,7 @@
             dom.forestCreateModal.classList.remove('flex');
         });
         dom.btnConfirmCreateForest.addEventListener('click', createForest);
+        dom.btnRenameForest.addEventListener('click', renameCurrentForest);
         dom.btnForestInvites.addEventListener('click', () => {
             renderForestInvites();
             dom.forestInvitesModal.classList.remove('hidden');
