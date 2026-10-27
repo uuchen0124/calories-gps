@@ -167,6 +167,10 @@
                     <i class="fa-solid fa-user-group text-sky-400 text-base w-5"></i>
                     <span>好友列表</span>
                 </button>
+                <button id="navTabForest" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left">
+                    <i class="fa-solid fa-tree text-lime-400 text-base w-5"></i>
+                    <span>好友森林</span>
+                </button>
             </nav>
         </div>
 
@@ -430,7 +434,37 @@
             </section>
             <section id="friendsListContainer" class="flex-1 space-y-2"><div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 text-xs text-slate-400">尚未登入或目前沒有好友。</div></section>
         </div>
+
+        <!-- 視圖 6：好友森林 -->
+        <div id="viewForest" class="hidden flex-1 flex flex-col gap-4">
+            <section class="bg-gradient-to-br from-emerald-950/80 via-slate-800/90 to-amber-950/50 p-4 rounded-2xl border border-lime-500/30 shadow-md space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div><h2 class="text-base font-bold text-white"><i class="fa-solid fa-tree text-lime-300 mr-2"></i>好友森林</h2><p class="text-xs text-slate-400 mt-1">先種滿目前土地，才能開發下一片土地</p></div>
+                    <div class="flex items-center gap-2"><select id="forestFriendSelect" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs"></select><button id="btnOpenForestExchange" class="px-3 py-2 rounded-xl bg-lime-400 hover:bg-lime-300 text-slate-950 text-xs font-bold"><i class="fa-solid fa-seedling mr-1"></i>對換植物</button></div>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <div class="bg-slate-950/50 rounded-xl border border-slate-700 p-3"><span class="text-slate-400">累積星星</span><strong id="forestEarnedStars" class="block text-amber-300 text-lg mt-1">0</strong></div>
+                    <div class="bg-slate-950/50 rounded-xl border border-slate-700 p-3"><span class="text-slate-400">可用星星</span><strong id="forestAvailableStars" class="block text-emerald-300 text-lg mt-1">0</strong></div>
+                    <div class="bg-slate-950/50 rounded-xl border border-slate-700 p-3"><span class="text-slate-400">已開發土地</span><strong id="forestLandProgress" class="block text-lime-300 text-lg mt-1">1 / 6</strong></div>
+                    <div class="bg-slate-950/50 rounded-xl border border-slate-700 p-3"><span class="text-slate-400">目前好友</span><strong id="forestFriendName" class="block text-sky-300 mt-1">尚未選擇</strong></div>
+                </div>
+                <p id="forestStatus" class="text-[11px] text-slate-400 min-h-4"></p>
+            </section>
+            <section id="forestLands" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></section>
+        </div>
     </main>
+
+    <div id="forestExchangeModal" class="hidden fixed inset-0 z-[1200] bg-slate-950/80 backdrop-blur-sm items-center justify-center p-4">
+        <div class="w-full max-w-lg bg-slate-900 border border-lime-500/40 rounded-2xl p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between"><h3 class="text-base font-bold text-white"><i class="fa-solid fa-leaf text-lime-300 mr-2"></i>對換植物</h3><button id="btnCloseForestExchange" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button></div>
+            <p class="text-xs text-slate-400">1 大卡 = 1 顆星星。幼苗每次 30 顆星星換 8 株；花朵或大樹每次 100 顆星星換 3 株。</p>
+            <label class="block text-xs text-slate-400">選擇土地<select id="forestExchangeLand" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white"></select></label>
+            <div class="grid grid-cols-3 gap-2" id="forestPlantChoices"></div>
+            <label class="block text-xs text-slate-400">兌換數量（組）<input id="forestExchangeQuantity" type="number" min="1" max="99" value="1" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white"></label>
+            <p id="forestExchangeCost" class="text-xs text-amber-300">請選擇植物</p>
+            <button id="btnConfirmForestExchange" class="w-full px-4 py-3 rounded-xl bg-lime-400 hover:bg-lime-300 text-slate-950 font-bold">確認兌換並種植</button>
+        </div>
+    </div>
 
     <!-- 體態設定 Modal -->
     <div id="userModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -832,7 +866,11 @@
             currentSessionMetrics: null,
             currentUser: null,
             accountProfile: { nickname: '', avatarUrl: '' },
-            friendRankingMonthKey: ''
+            friendRankingMonthKey: '',
+            forestFriendUid: '',
+            forestData: null,
+            forestSelectedPlant: 'seedling',
+            forestWallet: { spentStars: 0 }
         };
 
         const HPA_MET_TABLE = {
@@ -858,10 +896,12 @@
             viewImport: document.getElementById('viewImport'),
             viewAccount: document.getElementById('viewAccount'),
             viewFriends: document.getElementById('viewFriends'),
+            viewForest: document.getElementById('viewForest'),
             historyListContainer: document.getElementById('historyListContainer'),
             navTabImport: document.getElementById('navTabImport'),
             navTabAccount: document.getElementById('navTabAccount'),
             navTabFriends: document.getElementById('navTabFriends'),
+            navTabForest: document.getElementById('navTabForest'),
             trackImportInput: document.getElementById('trackImportInput'),
             trackImportStatus: document.getElementById('trackImportStatus'),
             importTrackPanel: document.getElementById('importTrackPanel'),
@@ -897,6 +937,21 @@
             friendActionStatus: document.getElementById('friendActionStatus'),
             friendsListContainer: document.getElementById('friendsListContainer'),
             friendRankingMonth: document.getElementById('friendRankingMonth'),
+            forestFriendSelect: document.getElementById('forestFriendSelect'),
+            forestEarnedStars: document.getElementById('forestEarnedStars'),
+            forestAvailableStars: document.getElementById('forestAvailableStars'),
+            forestLandProgress: document.getElementById('forestLandProgress'),
+            forestFriendName: document.getElementById('forestFriendName'),
+            forestStatus: document.getElementById('forestStatus'),
+            forestLands: document.getElementById('forestLands'),
+            btnOpenForestExchange: document.getElementById('btnOpenForestExchange'),
+            forestExchangeModal: document.getElementById('forestExchangeModal'),
+            btnCloseForestExchange: document.getElementById('btnCloseForestExchange'),
+            forestExchangeLand: document.getElementById('forestExchangeLand'),
+            forestPlantChoices: document.getElementById('forestPlantChoices'),
+            forestExchangeQuantity: document.getElementById('forestExchangeQuantity'),
+            forestExchangeCost: document.getElementById('forestExchangeCost'),
+            btnConfirmForestExchange: document.getElementById('btnConfirmForestExchange'),
             btnClearHistory: document.getElementById('btnClearHistory'),
             btnGoogleAuth: document.getElementById('btnGoogleAuth'),
             authButtonText: document.getElementById('authButtonText'),
@@ -1035,6 +1090,7 @@
                         }
                         await loadUserProfile(user);
                         await loadHistoryFromCloud();
+                        await loadForestWallet();
                         await syncPublicProfile();
                         await loadFriendsFromCloud();
                     } else {
@@ -1330,6 +1386,160 @@
             }
         }
 
+        const FOREST_LANDS = ['晨光草地', '彩虹花園', '風之林', '星河樹海', '月影山谷', '永恆森林'];
+        const FOREST_PLANTS = {
+            seedling: { name: '小幼苗', bundle: 8, cost: 30, icon: 'fa-seedling' },
+            flower: { name: '花朵', bundle: 3, cost: 100, icon: 'fa-fan' },
+            tree: { name: '大樹', bundle: 3, cost: 100, icon: 'fa-tree' }
+        };
+
+        function totalEarnedStars() {
+            return Math.max(0, Math.floor(APP.history.reduce((total, record) => {
+                const summary = getTrackSummary(record);
+                return total + Number(summary.estimatedCalories ?? summary.calories ?? 0);
+            }, 0)));
+        }
+
+        function forestIdForUsers(uidA, uidB) {
+            return [uidA, uidB].sort().join('_');
+        }
+
+        function defaultForestData(members) {
+            return { members: [...members].sort(), unlockedLands: 1, plants: {}, updatedAt: new Date().toISOString() };
+        }
+
+        function plantColorFor(uid, type) {
+            const palettes = {
+                seedling: ['#4ade80', '#22d3ee', '#facc15', '#fb7185', '#c084fc'],
+                flower: ['#fb7185', '#f472b6', '#facc15', '#a78bfa', '#2dd4bf'],
+                tree: ['#22c55e', '#14b8a6', '#84cc16', '#10b981', '#06b6d4']
+            };
+            let hash = 0;
+            for (const char of `${uid}-${type}`) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+            return palettes[type][hash % palettes[type].length];
+        }
+
+        function plantIconSvg(type, color, size = 44) {
+            if (type === 'flower') return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" aria-label="花朵"><path d="M32 29v29" stroke="#22543d" stroke-width="5" stroke-linecap="round"/><path d="M29 48c-9-7-14 1-17 4M35 43c8-7 13-2 16 1" fill="none" stroke="#22543d" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="20" r="8" fill="#22543d"/><path d="M32 12C23-2 8 8 17 21 2 19 1 37 18 36 8 47 22 57 32 43 42 57 56 47 46 36 63 37 62 19 47 21 56 8 41-2 32 12Z" fill="${color}" stroke="#be4862" stroke-width="2"/></svg>`;
+            if (type === 'tree') return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" aria-label="大樹"><path d="M29 39h7v20h-7z" fill="#975d35"/><path d="M32 42c-13-9-18-24-7-31 2-8 14-10 19-2 12 4 12 19 3 25-2 11-10 14-15 8Z" fill="${color}" stroke="#166534" stroke-width="2"/><path d="M19 30c7-7 18-9 28-5" fill="none" stroke="#86efac" stroke-width="3" stroke-linecap="round" opacity=".7"/></svg>`;
+            return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" aria-label="幼苗"><path d="M32 55V30" stroke="#8b6b57" stroke-width="4" stroke-linecap="round"/><path d="M31 35C16 33 10 22 13 13c11-1 21 5 19 22Z" fill="${color}" stroke="#166534" stroke-width="2"/><path d="M33 29c10-12 20-10 23-8-2 12-12 18-23 15Z" fill="${color}" opacity=".8" stroke="#166534" stroke-width="2"/><path d="M20 55h24" stroke="#8b6b57" stroke-width="4" stroke-linecap="round"/></svg>`;
+        }
+
+        async function getForestFriends() {
+            const user = auth?.currentUser;
+            if (!db || !user || user.isAnonymous) return [];
+            const snapshot = await getDocs(query(collection(db, 'artifacts', appId, 'friendships'), where('members', 'array-contains', user.uid)));
+            const friends = [];
+            for (const friendship of snapshot.docs) {
+                const uid = (friendship.data().members || []).find(item => item !== user.uid);
+                if (!uid) continue;
+                const profile = await getDoc(doc(db, 'artifacts', appId, 'publicProfiles', uid));
+                if (profile.exists()) friends.push({ uid, ...profile.data() });
+            }
+            return friends;
+        }
+
+        async function loadForestForFriend(friendUid) {
+            const user = auth?.currentUser;
+            if (!db || !user || user.isAnonymous || !friendUid) return;
+            APP.forestFriendUid = friendUid;
+            const forestRef = doc(db, 'artifacts', appId, 'forests', forestIdForUsers(user.uid, friendUid));
+            try {
+                const snapshot = await getDoc(forestRef);
+                APP.forestData = snapshot.exists() ? snapshot.data() : defaultForestData([user.uid, friendUid]);
+            } catch (error) {
+                console.warn('Forest load error:', error);
+                APP.forestData = defaultForestData([user.uid, friendUid]);
+                dom.forestStatus.innerText = '森林尚未建立，完成第一次種植後會同步給好友。';
+            }
+            renderForest();
+        }
+
+        async function loadForestView() {
+            const friends = await getForestFriends();
+            dom.forestFriendSelect.innerHTML = friends.length ? friends.map(friend => `<option value="${friend.uid}">${friend.nickname || friend.friendCode || '好友'}</option>`).join('') : '<option value="">請先加入好友</option>';
+            const selected = friends.find(friend => friend.uid === APP.forestFriendUid)?.uid || friends[0]?.uid || '';
+            dom.forestFriendSelect.value = selected;
+            if (selected) await loadForestForFriend(selected);
+            else {
+                APP.forestData = null;
+                dom.forestFriendName.innerText = '尚未加入好友';
+                dom.forestStatus.innerText = '請先到好友列表加入好友，才能建立共享森林。';
+                renderForest();
+            }
+        }
+
+        function renderForest() {
+            const data = APP.forestData;
+            const user = auth?.currentUser;
+            const earned = totalEarnedStars();
+            const spent = Number(APP.forestWallet?.spentStars || 0);
+            const available = Math.max(0, earned - spent);
+            dom.forestEarnedStars.innerText = earned;
+            dom.forestAvailableStars.innerText = available;
+            dom.forestLandProgress.innerText = `${data?.unlockedLands || 1} / ${FOREST_LANDS.length}`;
+            dom.forestFriendName.innerText = APP.forestFriendUid ? (dom.forestFriendSelect.selectedOptions[0]?.textContent || '好友') : '尚未選擇';
+            dom.forestLands.innerHTML = FOREST_LANDS.map((name, index) => {
+                const landNumber = index + 1;
+                const unlocked = landNumber <= Number(data?.unlockedLands || 1);
+                const plants = data?.plants?.[landNumber] || {};
+                const entries = Object.entries(FOREST_PLANTS).flatMap(([type, info]) => Object.entries(plants[type] || {}).map(([uid, count]) => ({ type, info, uid, count })));
+                const plantHtml = entries.length ? entries.map(item => `<div class="flex flex-col items-center" title="${item.info.name} ${item.count} 株">${plantIconSvg(item.type, plantColorFor(item.uid, item.type), 48)}<span class="text-[10px] text-slate-300">${item.count} 株</span></div>`).join('') : '<span class="text-xs text-slate-500">尚未種植</span>';
+                return `<article class="${unlocked ? 'bg-emerald-950/40 border-lime-500/30' : 'bg-slate-900/70 border-slate-700 opacity-70'} border rounded-2xl p-4 min-h-36"><div class="flex items-center justify-between"><h3 class="text-sm font-bold ${unlocked ? 'text-lime-200' : 'text-slate-500'}">土地 ${landNumber} · ${name}</h3><span class="text-[10px] ${unlocked ? 'text-emerald-300' : 'text-slate-500'}">${unlocked ? '已開發' : '完成前一片土地後解鎖'}</span></div><div class="flex items-end gap-3 mt-4 min-h-16">${unlocked ? plantHtml : '<i class="fa-solid fa-lock text-slate-600 text-2xl"></i>'}</div></article>`;
+            }).join('');
+        }
+
+        function renderForestPlantChoices() {
+            dom.forestPlantChoices.innerHTML = Object.entries(FOREST_PLANTS).map(([type, info]) => `<button data-plant-type="${type}" class="forest-plant-choice bg-slate-800 border border-slate-700 hover:border-lime-400 rounded-xl p-2 text-center"><div>${plantIconSvg(type, plantColorFor(auth?.currentUser?.uid || 'guest', type), 54)}</div><span class="text-[11px] text-white">${info.name}</span><small class="block text-[10px] text-amber-300">${info.cost} 星 / ${info.bundle} 株</small></button>`).join('');
+            document.querySelectorAll('.forest-plant-choice').forEach(button => button.addEventListener('click', () => {
+                APP.forestSelectedPlant = button.dataset.plantType;
+                document.querySelectorAll('.forest-plant-choice').forEach(item => item.classList.toggle('border-lime-400', item === button));
+                updateForestExchangeCost();
+            }));
+        }
+
+        function updateForestExchangeCost() {
+            const plant = FOREST_PLANTS[APP.forestSelectedPlant];
+            const quantity = Math.max(1, Number(dom.forestExchangeQuantity.value) || 1);
+            dom.forestExchangeCost.innerText = `${plant.name}：${quantity} 組，共 ${plant.cost * quantity} 顆星星，種下 ${plant.bundle * quantity} 株。可用星星：${Math.max(0, totalEarnedStars() - Number(APP.forestWallet?.spentStars || 0))}`;
+        }
+
+        async function loadForestWallet() {
+            const user = auth?.currentUser;
+            APP.forestWallet = { spentStars: 0 };
+            if (!db || !user || user.isAnonymous) return;
+            const snapshot = await getDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'forest', 'wallet'));
+            if (snapshot.exists()) APP.forestWallet = snapshot.data();
+        }
+
+        async function exchangeForestPlant() {
+            const user = auth?.currentUser;
+            const type = APP.forestSelectedPlant;
+            const plant = FOREST_PLANTS[type];
+            const land = Number(dom.forestExchangeLand.value);
+            const quantity = Math.max(1, Math.floor(Number(dom.forestExchangeQuantity.value) || 1));
+            if (!user || user.isAnonymous || !APP.forestData || !APP.forestFriendUid) { dom.forestStatus.innerText = '請先登入並選擇好友森林。'; return; }
+            const cost = plant.cost * quantity;
+            const available = Math.max(0, totalEarnedStars() - Number(APP.forestWallet?.spentStars || 0));
+            if (land > Number(APP.forestData.unlockedLands || 1)) { dom.forestStatus.innerText = '這片土地尚未解鎖。'; return; }
+            if (cost > available) { dom.forestStatus.innerText = `星星不足，還需要 ${cost - available} 顆星星。`; return; }
+            const plants = APP.forestData.plants || {};
+            plants[land] ||= {};
+            plants[land][type] ||= {};
+            plants[land][type][user.uid] = Number(plants[land][type][user.uid] || 0) + plant.bundle * quantity;
+            APP.forestData.plants = plants;
+            if (land >= Number(APP.forestData.unlockedLands || 1)) APP.forestData.unlockedLands = Math.min(FOREST_LANDS.length, land + 1);
+            APP.forestData.updatedAt = new Date().toISOString();
+            APP.forestWallet.spentStars = Number(APP.forestWallet.spentStars || 0) + cost;
+            const forestRef = doc(db, 'artifacts', appId, 'forests', forestIdForUsers(user.uid, APP.forestFriendUid));
+            await setDoc(forestRef, APP.forestData, { merge: true });
+            await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'forest', 'wallet'), APP.forestWallet, { merge: true });
+            dom.forestStatus.innerText = `已兌換 ${plant.bundle * quantity} 株${plant.name}，下一片土地已準備解鎖。`;
+            dom.forestExchangeModal.classList.add('hidden');
+            dom.forestExchangeModal.classList.remove('flex');
+            renderForest();
+        }
+
         async function addFriendByCode() {
             const user = auth?.currentUser;
             const code = dom.friendCodeInput.value.trim().toUpperCase();
@@ -1449,6 +1659,7 @@
                 dom.viewImport.classList.add('hidden');
                 dom.viewAccount.classList.add('hidden');
                 dom.viewFriends.classList.add('hidden');
+                dom.viewForest.classList.add('hidden');
                 dom.navTabWorkout.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-semibold text-xs transition text-left";
                 dom.navTabHistory.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
                 dom.navTabImport.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
@@ -1463,6 +1674,7 @@
                 dom.viewImport.classList.add('hidden');
                 dom.viewAccount.classList.add('hidden');
                 dom.viewFriends.classList.add('hidden');
+                dom.viewForest.classList.add('hidden');
                 dom.navTabHistory.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 font-semibold text-xs transition text-left";
                 dom.navTabWorkout.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
                 dom.navTabImport.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
@@ -1477,6 +1689,7 @@
                 dom.viewImport.classList.remove('hidden');
                 dom.viewAccount.classList.add('hidden');
                 dom.viewFriends.classList.add('hidden');
+                dom.viewForest.classList.add('hidden');
                 dom.navTabImport.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 font-semibold text-xs transition text-left";
                 dom.navTabWorkout.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
                 dom.navTabHistory.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
@@ -1491,6 +1704,7 @@
                 dom.viewImport.classList.add('hidden');
                 dom.viewAccount.classList.remove('hidden');
                 dom.viewFriends.classList.add('hidden');
+                dom.viewForest.classList.add('hidden');
                 dom.navTabAccount.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-semibold text-xs transition text-left";
                 dom.navTabWorkout.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
                 dom.navTabHistory.className = dom.navTabWorkout.className;
@@ -1507,6 +1721,7 @@
                 dom.viewImport.classList.add('hidden');
                 dom.viewAccount.classList.add('hidden');
                 dom.viewFriends.classList.remove('hidden');
+                dom.viewForest.classList.add('hidden');
                 dom.navTabFriends.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-sky-500/15 border border-sky-500/40 text-sky-300 font-semibold text-xs transition text-left";
                 dom.navTabWorkout.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
                 dom.navTabHistory.className = dom.navTabWorkout.className;
@@ -1514,6 +1729,20 @@
                 dom.navTabAccount.className = dom.navTabWorkout.className;
                 dom.appHeaderTitle.innerText = "好友列表";
                 await loadFriendsFromCloud();
+            });
+
+            dom.navTabForest.addEventListener('click', async () => {
+                toggleSidebar(false);
+                dom.viewWorkout.classList.add('hidden');
+                dom.viewHistory.classList.add('hidden');
+                dom.viewImport.classList.add('hidden');
+                dom.viewAccount.classList.add('hidden');
+                dom.viewFriends.classList.add('hidden');
+                dom.viewForest.classList.remove('hidden');
+                dom.navTabForest.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-lime-500/15 border border-lime-500/40 text-lime-300 font-semibold text-xs transition text-left";
+                dom.navTabWorkout.className = dom.navTabHistory.className = dom.navTabImport.className = dom.navTabAccount.className = dom.navTabFriends.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition text-left";
+                dom.appHeaderTitle.innerText = "好友森林";
+                await loadForestView();
             });
         }
 
@@ -2683,6 +2912,25 @@
             APP.friendRankingMonthKey = dom.friendRankingMonth.value || currentMonthKey();
             await loadFriendsFromCloud();
         });
+
+        dom.forestFriendSelect.addEventListener('change', () => loadForestForFriend(dom.forestFriendSelect.value));
+        dom.btnOpenForestExchange.addEventListener('click', () => {
+            if (!APP.forestData || !APP.forestFriendUid) {
+                dom.forestStatus.innerText = '請先加入好友並選擇共享森林。';
+                return;
+            }
+            dom.forestExchangeLand.innerHTML = Array.from({ length: Number(APP.forestData.unlockedLands || 1) }, (_, index) => `<option value="${index + 1}">土地 ${index + 1} · ${FOREST_LANDS[index]}</option>`).join('');
+            renderForestPlantChoices();
+            updateForestExchangeCost();
+            dom.forestExchangeModal.classList.remove('hidden');
+            dom.forestExchangeModal.classList.add('flex');
+        });
+        dom.forestExchangeQuantity.addEventListener('input', updateForestExchangeCost);
+        dom.btnCloseForestExchange.addEventListener('click', () => {
+            dom.forestExchangeModal.classList.add('hidden');
+            dom.forestExchangeModal.classList.remove('flex');
+        });
+        dom.btnConfirmForestExchange.addEventListener('click', exchangeForestPlant);
 
         dom.btnOpenDetailModal.addEventListener('click', () => {
             if (APP.currentSessionMetrics) {
