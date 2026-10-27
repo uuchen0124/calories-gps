@@ -288,6 +288,7 @@
                 <p id="shadeRouteStatus" class="text-[10px] text-slate-400 min-h-4">請至少勾選一項規劃。</p><div id="shadeRouteSummary" class="hidden bg-slate-900/80 border border-sky-500/30 rounded-xl p-3 text-[11px] text-slate-300"></div>
             </section>
             <div id="planConflictModal" class="hidden fixed inset-0 z-[1000] bg-slate-950/70 backdrop-blur-sm items-center justify-center p-4"><div class="w-full max-w-md bg-slate-800 border border-slate-600 rounded-2xl p-5 shadow-2xl"><h3 class="text-base font-bold text-white">運動目標需要確認</h3><p id="planConflictText" class="text-sm text-slate-300 mt-3"></p><div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-5"><button id="btnChooseCalorieTarget" class="px-3 py-3 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">依目標卡路里設計</button><button id="btnChooseRouteTarget" class="px-3 py-3 rounded-xl bg-sky-500 text-slate-950 font-bold text-xs">依目前時間／距離設計</button><button id="btnAdjustPlan" class="px-3 py-3 rounded-xl bg-slate-700 text-slate-200 font-bold text-xs border border-slate-600">返回重新調整我的數據</button></div></div></div>
+            <div id="confirmDeleteModal" class="hidden fixed inset-0 z-[1100] bg-slate-950/70 backdrop-blur-sm items-center justify-center p-4"><div class="w-full max-w-sm bg-slate-800 border border-rose-500/40 rounded-2xl p-5 shadow-2xl"><h3 class="text-base font-bold text-white"><i class="fa-solid fa-triangle-exclamation text-rose-400 mr-2"></i>確認刪除</h3><p id="confirmDeleteText" class="text-sm text-slate-300 mt-3">確定要刪除這筆運動紀錄嗎？</p><div class="grid grid-cols-2 gap-2 mt-5"><button id="btnConfirmDelete" class="px-3 py-3 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold text-xs">是，刪除</button><button id="btnCancelDelete" class="px-3 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs border border-slate-600">否，保留</button></div></div></div>
 
             <!-- 控制列 -->
             <section class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-800/80 p-3 rounded-2xl border border-slate-800">
@@ -439,7 +440,7 @@
         <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
             <div class="bg-slate-850 p-4 border-b border-slate-800 flex justify-between items-center shrink-0">
                 <h3 class="font-bold text-white text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-list-check text-emerald-400"></i> 詳細運動數據報告 (8大指標)
+                    <i class="fa-solid fa-list-check text-emerald-400"></i> 詳細運動數據報告 (10項指標)
                 </h3>
                 <button id="btnCloseDetailModal" class="text-slate-400 hover:text-white">
                     <i class="fa-solid fa-xmark text-lg"></i>
@@ -479,6 +480,14 @@
                     <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
                         <div class="text-slate-400 text-[11px]">8. 最快相鄰點速度 (Max Instant Speed)</div>
                         <div id="detailMaxSpeed" class="digital-font text-lg font-bold text-rose-400 mt-0.5">0.0 km/h</div>
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
+                        <div class="text-slate-400 text-[11px]">9. 步數 (Steps)</div>
+                        <div id="detailSteps" class="digital-font text-lg font-bold text-amber-300 mt-0.5">0 步</div>
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
+                        <div class="text-slate-400 text-[11px]">10. 平均步頻 (Average Cadence)</div>
+                        <div id="detailCadence" class="digital-font text-lg font-bold text-sky-300 mt-0.5">0 SPM</div>
                     </div>
                 </div>
             </div>
@@ -699,7 +708,9 @@
             
             lastCoord: null,
             recordedPath: [], 
+            trackSamples: [],
             gpsWatchId: null,
+            lastCalorieTimestamp: 0,
             
             imuSupported: false,
             lastStepTimestamp: 0,
@@ -781,6 +792,8 @@
             detailSegments: document.getElementById('detailSegments'),
             detailStraight: document.getElementById('detailStraight'),
             detailMaxSpeed: document.getElementById('detailMaxSpeed'),
+            detailSteps: document.getElementById('detailSteps'),
+            detailCadence: document.getElementById('detailCadence'),
 
             btnOpenRouteMapModal: document.getElementById('btnOpenRouteMapModal'),
             routeMapModal: document.getElementById('routeMapModal'),
@@ -810,6 +823,10 @@
             ,btnChooseCalorieTarget: document.getElementById('btnChooseCalorieTarget')
             ,btnChooseRouteTarget: document.getElementById('btnChooseRouteTarget')
             ,btnAdjustPlan: document.getElementById('btnAdjustPlan')
+            ,confirmDeleteModal: document.getElementById('confirmDeleteModal')
+            ,confirmDeleteText: document.getElementById('confirmDeleteText')
+            ,btnConfirmDelete: document.getElementById('btnConfirmDelete')
+            ,btnCancelDelete: document.getElementById('btnCancelDelete')
         };
 
         let map = null;
@@ -820,6 +837,7 @@
         let plannedRouteLayer = null;
         let daylightCache = null;
         let pendingPlan = null;
+        let confirmResolver = null;
         const routeCache = new Map();
 
         // Firebase 初始化與設定
@@ -930,8 +948,27 @@
             }
         }
 
+        function askDeleteConfirmation(message) {
+            return new Promise(resolve => {
+                confirmResolver = resolve;
+                dom.confirmDeleteText.innerText = message;
+                dom.confirmDeleteModal.classList.remove('hidden');
+                dom.confirmDeleteModal.classList.add('flex');
+            });
+        }
+
+        function closeDeleteConfirmation(result) {
+            dom.confirmDeleteModal.classList.add('hidden');
+            dom.confirmDeleteModal.classList.remove('flex');
+            if (confirmResolver) {
+                const resolve = confirmResolver;
+                confirmResolver = null;
+                resolve(result);
+            }
+        }
+
         async function clearCloudHistory() {
-            if (!window.confirm('確定要刪除所有運動紀錄嗎？此操作無法復原。')) return;
+            if (!await askDeleteConfirmation('確定要刪除全部運動紀錄嗎？此操作無法復原。')) return;
             APP.history = [];
             renderHistoryList();
             if (!db || !auth || !auth.currentUser) return;
@@ -949,7 +986,7 @@
 
         async function deleteHistoryRecord(recordId) {
             const record = APP.history.find(item => item.id === recordId);
-            if (!record || !window.confirm('確定要刪除這筆運動紀錄嗎？')) return;
+            if (!record || !await askDeleteConfirmation('確定要刪除這筆運動紀錄嗎？此操作無法復原。')) return;
             APP.history = APP.history.filter(item => item.id !== recordId);
             renderHistoryList();
             if (!db || !auth || !auth.currentUser) return;
@@ -1074,15 +1111,14 @@
             const date = `${selected.getFullYear()}-${String(selected.getMonth() + 1).padStart(2, '0')}-${String(selected.getDate()).padStart(2, '0')}`;
             const cacheKey = `${origin.lat.toFixed(3)},${origin.lon.toFixed(3)},${date}`;
             if (daylightCache?.key === cacheKey) return daylightCache;
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${origin.lat}&longitude=${origin.lon}&daily=sunrise,sunset&timezone=auto&forecast_days=1&start_date=${date}&end_date=${date}`;
-            const response = await fetch(url);
-            if (!response.ok) throw new Error('日出日落資料暫時無法取得');
-            const data = await response.json();
-            const sunrise = new Date(data.daily.sunrise[0]);
-            const sunset = new Date(data.daily.sunset[0]);
+            const solarTimes = SunCalc.getTimes(selected, origin.lat, origin.lon);
+            const sunrise = solarTimes.sunrise;
+            const sunset = solarTimes.sunset;
+            const source = 'SunCalc（依目前 GPS 與日期計算）';
             const isNight = selected < sunrise || selected >= sunset;
-            daylightCache = { key: cacheKey, sunrise, sunset, isNight, timezone: data.timezone };
-            dom.daylightStatus.innerText = `${isNight ? '目前為夜間' : '目前為日間'}｜日出 ${sunrise.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}・日落 ${sunset.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}（Open-Meteo 每日資料）`;
+            daylightCache = { key: cacheKey, sunrise, sunset, isNight, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+            daylightCache.source = source;
+            dom.daylightStatus.innerText = `${isNight ? '目前為夜間' : '目前為日間'}｜日出 ${sunrise.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}・日落 ${sunset.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}（${source}）`;
             dom.nightShadeMessage.classList.toggle('hidden', !isNight);
             if (isNight) dom.enableShadePlanning.checked = false;
             updatePlanningFields();
@@ -1398,6 +1434,8 @@
             APP.elapsedSeconds = 0;
             APP.lastCoord = null;
             APP.recordedPath = [];
+            APP.trackSamples = [];
+            APP.lastCalorieTimestamp = 0;
             APP.stepCounterTemp = 0;
             APP.lastStepTimestamp = 0;
             if (clearMap && actualTrackPolyline) actualTrackPolyline.setLatLngs([]);
@@ -1493,7 +1531,8 @@
                 // GPS 死區過濾（小於 3.5 公尺視為原地靜止漂移）
                 if (dist > 3.5) {
                     const calcSpeedKmh = (dist / timeDiffSec) * 3.6;
-                    APP.currentSpeedKmh = (speed !== null && speed >= 0) ? (speed * 3.6) : calcSpeedKmh;
+                    const reportedSpeedKmh = (speed !== null && speed >= 0) ? (speed * 3.6) : calcSpeedKmh;
+                    APP.currentSpeedKmh = reportedSpeedKmh > 20 && calcSpeedKmh < 12 ? calcSpeedKmh : Math.min(reportedSpeedKmh, 20);
                     APP.totalDistanceMeters += dist;
                     APP.recordedPath.push({ lat: latitude, lng: longitude, speed: APP.currentSpeedKmh, timestamp: now });
                     actualTrackPolyline.addLatLng([latitude, longitude]);
@@ -1512,6 +1551,21 @@
             }
         }
 
+        function appendTrackSample() {
+            const point = APP.lastCoord;
+            APP.trackSamples.push({
+                timestamp: new Date().toISOString(),
+                elapsedSeconds: APP.elapsedSeconds,
+                latitude: point?.lat ?? null,
+                longitude: point?.lng ?? null,
+                distanceMeters: Number(APP.totalDistanceMeters.toFixed(2)),
+                speedKmh: Number(APP.currentSpeedKmh.toFixed(2)),
+                cadenceSPM: APP.currentCadenceSPM,
+                met: APP.currentMET,
+                calories: Number(APP.totalCalories.toFixed(2))
+            });
+        }
+
         function evaluateSensorsAndCalories() {
             APP.currentCadenceSPM = APP.stepCounterTemp * 60;
             APP.stepCounterTemp = 0;
@@ -1525,6 +1579,7 @@
                 APP.currentMET = 0.0;
                 dom.sportModeName.innerText = '靜止休息';
                 dom.currentMetText.innerText = '0.0 MET';
+                appendTrackSample();
                 return; // 卡路里完全不增加
             }
 
@@ -1534,6 +1589,7 @@
                 APP.currentMET = 0.0;
                 dom.sportModeName.innerText = '疑似搭車(暫停計算)';
                 dom.currentMetText.innerText = '0.0 MET';
+                appendTrackSample();
                 return;
             } else {
                 APP.isTransitFraud = false;
@@ -1554,10 +1610,14 @@
             dom.currentMetText.innerText = `${selectedMode.met.toFixed(1)} MET`;
 
             if (APP.currentMET > 0) {
-                const addedKcal = (APP.currentMET * APP.user.weight * (1 / 3600));
+                const now = performance.now();
+                const elapsedForCalories = APP.lastCalorieTimestamp ? Math.min(2, Math.max(0, (now - APP.lastCalorieTimestamp) / 1000)) : 1;
+                APP.lastCalorieTimestamp = now;
+                const addedKcal = APP.currentMET * APP.user.weight * (elapsedForCalories / 3600);
                 APP.totalCalories += addedKcal;
                 dom.metricCalories.innerText = APP.totalCalories.toFixed(1);
             }
+            appendTrackSample();
         }
 
         function updateTimerDisplay() {
@@ -1571,7 +1631,14 @@
             const durationHrs = APP.elapsedSeconds > 0 ? (APP.elapsedSeconds / 3600) : 0.0001;
             const avgSpeedKmh = distKm / durationHrs;
             const validPoints = APP.recordedPath.length;
-            const segments = Math.max(1, Math.floor(validPoints / 5));
+            let segments = 0;
+            let wasMoving = false;
+            for (const sample of APP.trackSamples) {
+                const isMoving = sample.met > 0 || sample.speedKmh >= 1;
+                if (isMoving && !wasMoving) segments++;
+                wasMoving = isMoving;
+            }
+            segments = Math.max(1, segments);
 
             let straightDistKm = 0;
             if (APP.recordedPath.length >= 2) {
@@ -1585,9 +1652,38 @@
                 if (p.speed > maxSpeed) maxSpeed = p.speed;
             }
 
+            const averageCadence = APP.trackSamples.length
+                ? APP.trackSamples.reduce((sum, sample) => sum + sample.cadenceSPM, 0) / APP.trackSamples.length
+                : 0;
+
             const m = Math.floor(APP.elapsedSeconds / 60).toString().padStart(2, '0');
             const s = (APP.elapsedSeconds % 60).toString().padStart(2, '0');
             const timeStr = `${m}:${s}`;
+
+            const trackFile = {
+                format: 'yuyu-calorie-gps-track-v1',
+                generatedAt: new Date().toISOString(),
+                workout: {
+                    startedAt: APP.startTime ? new Date(APP.startTime).toISOString() : null,
+                    endedAt: new Date().toISOString(),
+                    user: { weightKg: APP.user.weight, age: APP.user.age, gender: APP.user.gender }
+                },
+                summary: {
+                    distanceKm: Number(distKm.toFixed(2)),
+                    durationSeconds: APP.elapsedSeconds,
+                    durationTime: timeStr,
+                    calories: Number(APP.totalCalories.toFixed(2)),
+                    averageSpeedKmh: Number(avgSpeedKmh.toFixed(2)),
+                    maxSpeedKmh: Number(maxSpeed.toFixed(2)),
+                    steps: APP.totalSteps,
+                    averageCadenceSPM: Number(averageCadence.toFixed(2)),
+                    recordedPoints: validPoints,
+                    segments,
+                    straightDistanceKm: Number(straightDistKm.toFixed(2))
+                },
+                gpsPath: [...APP.recordedPath],
+                samples: [...APP.trackSamples]
+            };
 
             APP.currentSessionMetrics = {
                 id: 'REC_' + Date.now(),
@@ -1600,18 +1696,19 @@
                 segments: segments,
                 straightDistance: straightDistKm.toFixed(2),
                 maxInstantSpeed: maxSpeed.toFixed(1),
-                pathCoordinates: [...APP.recordedPath]
+                pathCoordinates: [...APP.recordedPath],
+                steps: APP.totalSteps,
+                averageCadence: averageCadence.toFixed(1),
+                trackFile
             };
         }
 
         function showWorkoutResultModal() {
-            const kcal = APP.totalCalories;
+            const track = APP.currentSessionMetrics.trackFile;
+            const kcal = track.summary.calories;
             dom.resCalories.innerText = kcal.toFixed(1);
-            dom.resDistance.innerText = (APP.totalDistanceMeters / 1000).toFixed(2);
-            
-            const m = Math.floor(APP.elapsedSeconds / 60).toString().padStart(2, '0');
-            const s = (APP.elapsedSeconds % 60).toString().padStart(2, '0');
-            dom.resDuration.innerText = `${m}:${s}`;
+            dom.resDistance.innerText = track.summary.distanceKm.toFixed(2);
+            dom.resDuration.innerText = track.summary.durationTime;
 
             const equiv = getFoodEquivalent(kcal);
             let message = "";
@@ -1632,15 +1729,50 @@
             };
         }
 
+        function getTrackSummary(metrics) {
+            if (metrics.trackFile?.summary) return metrics.trackFile.summary;
+            return {
+                distanceKm: Number(metrics.totalDistance || 0), durationTime: metrics.durationTime || '00:00',
+                averageSpeedKmh: Number(metrics.avgSpeed || 0), calories: Number(metrics.calories || 0),
+                recordedPoints: Number(metrics.validPoints || 0), segments: Number(metrics.segments || 0),
+                straightDistanceKm: Number(metrics.straightDistance || 0), maxSpeedKmh: Number(metrics.maxInstantSpeed || 0),
+                steps: Number(metrics.steps || 0), averageCadenceSPM: Number(metrics.averageCadence || 0)
+            };
+        }
+
+        function downloadTrackFile(recordId) {
+            const record = APP.history.find(item => item.id === recordId);
+            if (!record) return;
+            const trackFile = record.trackFile || {
+                format: 'yuyu-calorie-gps-track-legacy',
+                generatedAt: record.dateStr,
+                summary: getTrackSummary(record),
+                gpsPath: record.pathCoordinates || [],
+                samples: []
+            };
+            const blob = new Blob([JSON.stringify(trackFile, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `workout-track-${record.dateStr.replace(/[^0-9]/g, '') || recordId}.json`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        }
+
         function populateDetailModal(metrics) {
-            dom.detailDist.innerText = metrics.totalDistance + ' km';
-            dom.detailTime.innerText = metrics.durationTime;
-            dom.detailAvgSpeed.innerText = metrics.avgSpeed + ' km/h';
-            dom.detailCals.innerText = metrics.calories + ' kcal';
-            dom.detailPoints.innerText = metrics.validPoints + ' 點';
-            dom.detailSegments.innerText = metrics.segments + ' 段';
-            dom.detailStraight.innerText = metrics.straightDistance + ' km';
-            dom.detailMaxSpeed.innerText = metrics.maxInstantSpeed + ' km/h';
+            const summary = getTrackSummary(metrics);
+            dom.detailDist.innerText = `${summary.distanceKm.toFixed(2)} km`;
+            dom.detailTime.innerText = summary.durationTime;
+            dom.detailAvgSpeed.innerText = `${summary.averageSpeedKmh.toFixed(1)} km/h`;
+            dom.detailCals.innerText = `${summary.calories.toFixed(1)} kcal`;
+            dom.detailPoints.innerText = `${summary.recordedPoints} 點`;
+            dom.detailSegments.innerText = `${summary.segments} 段`;
+            dom.detailStraight.innerText = `${summary.straightDistanceKm.toFixed(2)} km`;
+            dom.detailMaxSpeed.innerText = `${summary.maxSpeedKmh.toFixed(1)} km/h`;
+            dom.detailSteps.innerText = `${summary.steps} 步`;
+            dom.detailCadence.innerText = `${summary.averageCadenceSPM.toFixed(1)} SPM`;
         }
 
         function openRouteMapModal(metrics) {
@@ -1680,7 +1812,8 @@
             }
 
             APP.history.forEach((rec, idx) => {
-                const equiv = getFoodEquivalent(parseFloat(rec.calories));
+                const summary = getTrackSummary(rec);
+                const equiv = getFoodEquivalent(summary.calories);
                 const foodStr = equiv.matched ? `消耗一個${equiv.food.name}` : `接近${equiv.food.name}`;
 
                 const card = document.createElement('div');
@@ -1695,11 +1828,11 @@
                         <div class="min-w-0 flex-1">
                             <div class="text-[11px] font-mono text-emerald-400 truncate"><i class="fa-solid fa-calendar-days mr-1"></i>${rec.dateStr}</div>
                             <div class="flex items-center gap-3 mt-1 text-xs">
-                                <span class="text-slate-300 font-bold"><i class="fa-solid fa-stopwatch text-indigo-400 mr-1"></i>${rec.durationTime}</span>
-                                <span class="text-cyan-300 font-bold"><i class="fa-solid fa-route text-cyan-400 mr-1"></i>${rec.totalDistance} km</span>
+                                <span class="text-slate-300 font-bold"><i class="fa-solid fa-stopwatch text-indigo-400 mr-1"></i>${summary.durationTime}</span>
+                                <span class="text-cyan-300 font-bold"><i class="fa-solid fa-route text-cyan-400 mr-1"></i>${summary.distanceKm.toFixed(2)} km</span>
                             </div>
                             <div class="text-[10px] text-amber-400 mt-0.5 truncate">
-                                <i class="fa-solid fa-utensils mr-1"></i>${foodStr} (${rec.calories} kcal)
+                                <i class="fa-solid fa-utensils mr-1"></i>${foodStr} (${summary.calories.toFixed(1)} kcal) · ${summary.steps} 步 · ${summary.averageSpeedKmh.toFixed(1)} km/h
                             </div>
                         </div>
                     </div>
@@ -1712,6 +1845,9 @@
                         </button>
                         <button class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-rose-950/70 text-rose-400 flex items-center justify-center border border-slate-700 transition history-delete-btn" data-id="${rec.id}" title="刪除此筆紀錄">
                             <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                        <button class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-sky-950/70 text-sky-300 flex items-center justify-center border border-slate-700 transition history-export-btn" data-id="${rec.id}" title="匯出軌跡 JSON">
+                            <i class="fa-solid fa-download text-xs"></i>
                         </button>
                     </div>
                 `;
@@ -1765,6 +1901,13 @@
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     deleteHistoryRecord(e.currentTarget.dataset.id);
+                });
+            });
+
+            document.querySelectorAll('.history-export-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    downloadTrackFile(e.currentTarget.dataset.id);
                 });
             });
         }
@@ -1831,6 +1974,9 @@
         dom.btnClearHistory.addEventListener('click', () => {
             clearCloudHistory();
         });
+
+        dom.btnConfirmDelete.addEventListener('click', () => closeDeleteConfirmation(true));
+        dom.btnCancelDelete.addEventListener('click', () => closeDeleteConfirmation(false));
 
         dom.btnPlanShadeRoute.addEventListener('click', () => {
             planShadeRoute();
